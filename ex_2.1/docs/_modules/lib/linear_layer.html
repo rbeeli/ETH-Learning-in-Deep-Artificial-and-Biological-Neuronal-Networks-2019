@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.linear_layer &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.linear_layer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A linear layer module that maintains its own parameters</span>
+<span class="sd">-------------------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.linear_layer` contains our own implementation of the</span>
+<span class="sd">PyTorch class :class:`torch.nn.Linear`. The goal is to utilize the custom</span>
+<span class="sd">``Functions`` implemented in module :mod:`lib.backprop_functions` (in</span>
+<span class="sd">particular, the ``Function`` :class:`lib.backprop_functions.LinearFunction`)</span>
+<span class="sd">and to provide a wrapper that takes care of managing the parameters</span>
+<span class="sd">(:math:`W` and :math:`\mathbf{b}`) of such a linear layer.</span>
+
+<span class="sd">.. note::</span>
+<span class="sd">    PyTorch its :class:`torch.autograd.Function` interface is stateless.</span>
+<span class="sd">    Therefore, the wrapper provided in this module is necessary in order to</span>
+<span class="sd">    obtain a convinient interface for linear layers, such that the user doesn&#39;t</span>
+<span class="sd">    have to maintain the parameters manually.</span>
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.linear_layer.LinearLayer</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="kn">import</span> <span class="nn">lib.backprop_functions</span> <span class="k">as</span> <span class="nn">bf</span>
+
+<div class="viewcode-block" id="LinearLayer"><a class="viewcode-back" href="../../modules.html#lib.linear_layer.LinearLayer">[docs]</a><span class="k">class</span> <span class="nc">LinearLayer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper for ``Function`` :class:`lib.backprop_functions.LinearFunction`.</span>
+
+<span class="sd">    The interface is inspired by the implementation of class</span>
+<span class="sd">    :class:`torch.nn.Linear`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        weights (torch.nn.Parameter): The weight matrix :math:`W` of the layer.</span>
+<span class="sd">        bias (torch.nn.Parameter): The bias vector :math:`\mathbf{b}` of the</span>
+<span class="sd">            layer. Attribute is ``None`` if argument ``bias`` was passed as</span>
+<span class="sd">            ``None`` in the constructor.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        in_features (int): Size of each input sample.</span>
+<span class="sd">        out_features (int): Size of each output sample.</span>
+<span class="sd">        bias (bool): If set to ``False``, the layer will not learn an additive</span>
+<span class="sd">            bias. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">out_features</span><span class="p">,</span> <span class="n">in_features</span><span class="p">),</span>
+                                     <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Initialize weight matrix. Note, the `torch.nn.Linear` implementation</span>
+        <span class="c1"># uses `nn.init.kaiming_uniform_` for initialization.</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_uniform_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bias</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">out_features</span><span class="p">),</span>
+                                      <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">constant_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`weights`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">bias</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`bias`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span>
+
+<div class="viewcode-block" id="LinearLayer.forward"><a class="viewcode-back" href="../../modules.html#lib.linear_layer.LinearLayer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the output activation of a linear layer.</span>
+
+<span class="sd">        This method simply applies the</span>
+<span class="sd">        :class:`lib.backprop_functions.LinearFunction` ``Function`` using the</span>
+<span class="sd">        internally maintained weights.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: See description of argument ``A`` of method</span>
+<span class="sd">                :meth:`lib.backprop_functions.LinearFunction.forward`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            See return value of method</span>
+<span class="sd">            :meth:`lib.backprop_functions.LinearFunction.forward`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bf</span><span class="o">.</span><span class="n">linear_function</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span></div></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>tests.public.lib.test_backprop_functions &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for tests.public.lib.test_backprop_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Public test cases for module :mod:`lib.backprop_functions`</span>
+<span class="sd">----------------------------------------------------------</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="k">import</span> <span class="n">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="kn">import</span> <span class="nn">lib.backprop_functions</span> <span class="k">as</span> <span class="nn">bf</span>
+
+<div class="viewcode-block" id="BackpropFunctionsTestCase"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase">[docs]</a><span class="k">class</span> <span class="nc">BackpropFunctionsTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A set of public test cases for module :mod:`lib.backprop_functions`.</span>
+
+<span class="sd">    Here, we assess whether the ``forward`` and ``backward`` methods for the</span>
+<span class="sd">    ``Functions`` implemented in the module :mod:`lib.backprop_functions` are</span>
+<span class="sd">    correctly implemented.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="BackpropFunctionsTestCase.setUp"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Ensure reproducibility.</span>
+        <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+        <span class="c1"># Data</span>
+        <span class="n">A1_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">A2_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">Z_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">T_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="c1"># Parameters</span>
+        <span class="n">W_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">b_np</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">A1_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">A2_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">Z_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">T_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">W_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">b_np</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BackpropFunctionsTestCase.test_mse_loss"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase.test_mse_loss">[docs]</a>    <span class="k">def</span> <span class="nf">test_mse_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.backprop_functions.MSELossFunction`.&quot;&quot;&quot;</span>
+        <span class="c1"># Simple test of the forward method only.</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">3.</span><span class="p">]]))</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]]))</span>
+        <span class="n">target_mse</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># 2.5</span>
+        <span class="n">our_mse</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">our_mse</span><span class="p">,</span> <span class="n">target_mse</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+                               <span class="s1">&#39;MSE value not correctly computed.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Compare forward and backward method to PyTorch its implementation.</span>
+        <span class="n">mse_ours</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pytorch_mse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">mse_ours</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span>
+                               <span class="n">mse_torch</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="mi">5</span><span class="p">,</span>
+                               <span class="s1">&#39;MSE value not correctly computed.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Check if gradient computation is correct (i.e., backward path)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_ours</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">our_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_torch</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">torch_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="n">grad_error</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_A</span> <span class="o">-</span> <span class="n">torch_grad_A</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;MSE loss gradients not &#39;</span> <span class="o">+</span>
+                               <span class="s1">&#39;correctly computed.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BackpropFunctionsTestCase.test_mse_loss_targets"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase.test_mse_loss_targets">[docs]</a>    <span class="k">def</span> <span class="nf">test_mse_loss_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing if gradients of targets in class</span>
+<span class="sd">        :class:`lib.backprop_functions.MSELossFunction` are correctly</span>
+<span class="sd">        implemented.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Ensure that the gradients with respect to the targets are also</span>
+        <span class="c1"># correctly computed.</span>
+        <span class="n">mse_ours</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="p">)</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pytorch_mse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_ours</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">our_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_torch</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">torch_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="n">grad_error</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_A</span> <span class="o">-</span> <span class="n">torch_grad_A</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+            <span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s1">&#39;MSE loss gradients for targets not correctly computed.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BackpropFunctionsTestCase.test_sigmoid"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase.test_sigmoid">[docs]</a>    <span class="k">def</span> <span class="nf">test_sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.backprop_functions.SigmoidFunction`.&quot;&quot;&quot;</span>
+        <span class="n">sigma_ours</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">sigmoid_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">sigma_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">sigma_error</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">sigma_ours</span> <span class="o">-</span> <span class="n">sigma_torch</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">sigma_error</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+                               <span class="s1">&#39;Sigmoid values are incorrectly computed.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Note, we need a scalar loss to use `backward()`.</span>
+        <span class="n">mse_ours</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">sigma_ours</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">sigma_torch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_ours</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">our_grad_Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="n">mse_torch</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">torch_grad_Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="n">grad_error</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_Z</span> <span class="o">-</span> <span class="n">torch_grad_Z</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+            <span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+                         <span class="s1">&#39;Sigmoid gradients not correctly computed.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BackpropFunctionsTestCase.test_linear"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_backprop_functions.BackpropFunctionsTestCase.test_linear">[docs]</a>    <span class="k">def</span> <span class="nf">test_linear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.backprop_functions.LinearFunction`.&quot;&quot;&quot;</span>
+        <span class="n">Z_ours</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">linear_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
+        <span class="n">Z_torch</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
+
+        <span class="n">Z_error</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Z_ours</span> <span class="o">-</span> <span class="n">Z_torch</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">Z_error</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s1">&#39;Linear layer output is incorrectly computed.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Note, we need a scalar loss to use `backward()`.</span>
+        <span class="n">mse_ours</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">Z_ours</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">Z_torch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+
+        <span class="n">mse_ours</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+        <span class="n">our_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">our_grad_W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">our_grad_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+
+        <span class="n">mse_torch</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+        <span class="n">torch_grad_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">torch_grad_W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">torch_grad_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="n">grad_error_A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_A</span> <span class="o">-</span> <span class="n">torch_grad_A</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+            <span class="n">numpy</span><span class="p">()</span>
+        <span class="n">grad_error_W</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_W</span> <span class="o">-</span> <span class="n">torch_grad_W</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+            <span class="n">numpy</span><span class="p">()</span>
+        <span class="n">grad_error_b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">our_grad_b</span> <span class="o">-</span> <span class="n">torch_grad_b</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+            <span class="n">numpy</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error_A</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s1">&#39;Gradients with respects to inputs of linear layer are not &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;correctly computed.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error_W</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s1">&#39;Gradients with respects to weight matrix of linear layer are &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;not correctly computed.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertAlmostEqual</span><span class="p">(</span><span class="n">grad_error_b</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s1">&#39;Gradients with respects to bias vector of linear layer are not &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;correctly computed.&#39;</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_pytorch_mse</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper method to compute MSE value using PyTorch its</span>
+<span class="sd">        :func:`torch.nn.functional.mse_loss` function.</span>
+
+<span class="sd">        Note, that the reduction methods implemented by this PyTorch method</span>
+<span class="sd">        are mathematically not well justified but should effect loss</span>
+<span class="sd">        optimization only marginally.</span>
+
+<span class="sd">        This method simply replaces the implemented reduction methods by the</span>
+<span class="sd">        mathematically sound reduction method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            (....): See docstring of method</span>
+<span class="sd">                :meth:`lib.backprop_functions.MSELossFunction.forward`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            MSE value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+        <span class="n">mse_torch</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">mse_torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">mse_torch</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
