@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Learning in deep artificial and biological neuronal networks &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="learning-in-deep-artificial-and-biological-neuronal-networks">
+<h1>Learning in deep artificial and biological neuronal networks<a class="headerlink" href="#learning-in-deep-artificial-and-biological-neuronal-networks" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="documentation-for-the-coding-exercise-from-tutorial-2-1">
+<h2>Documentation for the coding exercise from Tutorial 2.1<a class="headerlink" href="#documentation-for-the-coding-exercise-from-tutorial-2-1" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#controller-for-simulations">Controller for simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#adding-custom-functions-to-pytorch-s-autograd">Adding custom functions to PyTorch’s autograd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#a-linear-layer-module-that-maintains-its-own-parameters">A linear layer module that maintains its own parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#implementation-of-a-multi-layer-perceptron-mlp">Implementation of a Multi-layer Perceptron (MLP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#a-collection-of-helper-functions">A collection of helper functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#public-test-cases-for-module-main">Public test cases for module <code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#public-test-cases-for-module-lib-backprop-functions">Public test cases for module <code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>In tutorial 2.1, you will be implementing parts of the backpropagation algorithm by completing missing parts in the module <a class="reference internal" href="modules.html#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a>. Tutorial 2.2 will be similar in spirit, but you will modify your implementations of the backward pass to implement the <a class="reference external" href="https://www.nature.com/articles/ncomms13276">Feedback-Alignment</a> (FA) algorithm.</p>
+<div class="section" id="tutorial-2-1-oct-2nd-2019">
+<h3>Tutorial 2.1 – Oct. 2nd, 2019<a class="headerlink" href="#tutorial-2-1-oct-2nd-2019" title="Permalink to this headline">¶</a></h3>
+<p>In the tutorial session on Oct. 2nd, 2019 you have seen how to derive the backpropagation update rules. In this exercise, you are going to implement the forward and backward pass for core blocks that are often used in Artificial Neural Networks.</p>
+<p>Please refer to the <a class="reference internal" href="modules.html#api-reference-label"><span class="std std-ref">API</span></a> to get an overview of the coding structure.</p>
+<p>You can test your implementations by following the instructions from the <a class="reference internal" href="tests.html#tests-reference-label"><span class="std std-ref">testing</span></a> page.</p>
+<p>In addition, you can see your code in action by learning a simple regression task via the script <a class="reference internal" href="modules.html#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a>. Please study the command-line arguments on how to use the script.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python main.py --help
+</pre></div>
+</div>
+<p>To visually certify the quality of the obtained predictions, you can visualize the results of a 1D regression task via</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python main.py --polynomial_regression --show_plot --epochs<span class="o">=</span><span class="m">1000</span> --lr<span class="o">=</span>1e-2
+</pre></div>
+</div>
+<p>We recommend playing around with command-line options such as learning rate <code class="docutils literal notranslate"><span class="pre">--lr</span></code>, momentum <code class="docutils literal notranslate"><span class="pre">--momentum</span></code>, the number of epochs <code class="docutils literal notranslate"><span class="pre">--epochs</span></code> or the batch size <code class="docutils literal notranslate"><span class="pre">--batchsize</span></code> as well as the architectural options of the neural network to get a feeling for how optimization with backpropagation in neural networks behaves.</p>
+<p><strong>Please refer to the assignment sheet to obtain further information on how exercises have to be handed in and how they are graded.</strong></p>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="modules.html" title="next chapter">API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
