@@ -107,7 +107,7 @@ class LinearFunction(Function):
         """
         ctx.save_for_backward(A, W, b)
 
-        Z = A.mm(W.transpose(0, 1)) + b
+        Z = A.mm(W.t()) + b
 
         return Z
 
@@ -169,7 +169,7 @@ class LinearFunction(Function):
             grad_A = grad_Z.mm(W)
 
         if ctx.needs_input_grad[1]:
-            grad_W = grad_Z.transpose(0,1).mm(A)
+            grad_W = grad_Z.t().mm(A)
 
         if b is not None and ctx.needs_input_grad[2]:
             grad_b = grad_Z.sum(0)
@@ -282,7 +282,7 @@ class SigmoidFunction(Function):
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            A = torch.sigmoid(Z)
+            A = 1 / (1 + torch.exp(-Z))
             grad_Z = grad_A * (A * (1 - A))
 
         return grad_Z
