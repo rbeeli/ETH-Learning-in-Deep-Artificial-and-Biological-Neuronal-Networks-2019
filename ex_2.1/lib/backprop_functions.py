@@ -282,8 +282,8 @@ class SigmoidFunction(Function):
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            sigmoid_gradient = Z * (1 - Z)
-            grad_Z = grad_A * sigmoid_gradient
+            A = torch.sigmoid(Z)
+            grad_Z = grad_A * (A * (1 - A))
 
         return grad_Z
 
