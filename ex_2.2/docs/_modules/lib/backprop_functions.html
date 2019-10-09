@@ -1,0 +1,505 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.backprop_functions &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.backprop_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Adding custom functions to PyTorch&#39;s autograd</span>
+<span class="sd">---------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.backprop_functions` contains custom implementations of</span>
+<span class="sd">neural network components (layers, activation functions, loss functions, ...),</span>
+<span class="sd">that are compatible with PyTorch its autograd_ package.</span>
+
+<span class="sd">A new functionality can be added to autograd_ by creating a subclass of class</span>
+<span class="sd">:class:`torch.autograd.Function`. In particular, we have to implement the</span>
+<span class="sd">:meth:`torch.autograd.Function.forward` method (which computes the output of a</span>
+<span class="sd">differentiable function) and the :meth:`torch.autograd.Function.backward`</span>
+<span class="sd">method (which computes the partial derivatives of the output of the implemented</span>
+<span class="sd">:meth:`torch.autograd.Function.forward` method with respect to all input tensors</span>
+<span class="sd">that are flagged to require gradients).</span>
+
+<span class="sd">Please checkout the corresponding documentation of class</span>
+<span class="sd">:class:`torch.autograd.Function`.</span>
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.backprop_functions.LinearFunction</span>
+<span class="sd">    lib.backprop_functions.linear_function</span>
+<span class="sd">    lib.backprop_functions.SigmoidFunction</span>
+<span class="sd">    lib.backprop_functions.sigmoid_function</span>
+<span class="sd">    lib.backprop_functions.MSELossFunction</span>
+<span class="sd">    lib.backprop_functions.mse_loss</span>
+
+<span class="sd">.. _autograd:</span>
+<span class="sd">    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+
+<div class="viewcode-block" id="LinearFunction"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.LinearFunction">[docs]</a><span class="k">class</span> <span class="nc">LinearFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a fully-connected layer w/o activation function.</span>
+
+<span class="sd">    This class is a ``Function`` that behaves just like PyTorch&#39;s class</span>
+<span class="sd">    :class:`torch.nn.Linear`. Since this class implements the interface</span>
+<span class="sd">    :class:`torch.autograd.Function`, we can use it to specify a custom</span>
+<span class="sd">    backpropagation behavior.</span>
+
+<span class="sd">    In this specific case, the ``Function`` shall behave just as in classic</span>
+<span class="sd">    backpropagation (i.e., it shall behave identical to the proprietory PyTorch</span>
+<span class="sd">    implementation).</span>
+
+<span class="sd">    Assuming column vectors: layer input :math:`\mathbf{a} \in \mathbb{R}^M`,</span>
+<span class="sd">    bias vector :math:`\mathbf{b} \in \mathbb{R}^N` and a weight matrix</span>
+<span class="sd">    :math:`W \in \mathbb{R}^{N \times M}`, this layer simply computes</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-single-sample</span>
+
+<span class="sd">        \mathbf{z} = W \mathbf{a} + \mathbf{b}</span>
+
+<span class="sd">    (or :math:`\mathbf{z} = W \mathbf{a}` if :math:`\mathbf{b}` is ``None``).</span>
+
+<span class="sd">    Note, since we want to process mini-batches (containing :math:`B` samples</span>
+<span class="sd">    each), the input to the :meth:`forward` method is actually a set of samples</span>
+<span class="sd">    :math:`\mathbf{a}` collected into a matrix</span>
+<span class="sd">    :math:`A \in \mathbb{R}^{B \times M}`.</span>
+
+<span class="sd">    We additionally introduce the matrix</span>
+<span class="sd">    :math:`\tilde{B} \in \mathbb{R}^{B \times N}` which simply contains copies</span>
+<span class="sd">    of the bias vector :math:`\mathbf{b}` in its rows.</span>
+
+<span class="sd">    The mathematical operation described for single samples in eq.</span>
+<span class="sd">    :eq:`eq-single-sample`, is stated for a the case of mini-batches below</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-mini-batch</span>
+
+<span class="sd">        Z = A W^T + \tilde{B}</span>
+
+<span class="sd">    where :math:`Z \in \mathbb{R}^{B \times N}` is the output matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LinearFunction.forward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.LinearFunction.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the output of a linear layer.</span>
+
+<span class="sd">        This method implements eq. :eq:`eq-mini-batch`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: A context. Should be used to store activations which are needed</span>
+<span class="sd">                in the backward pass.</span>
+<span class="sd">            A: A mini-batch of input activations :math:`A`.</span>
+<span class="sd">            W: The weight matrix :math:`W`.</span>
+<span class="sd">            b (optional): The bias vector :math:`\mathbf{b}`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output activations :math:`Z` as defined by eq.</span>
+<span class="sd">            :eq:`eq-mini-batch`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># Z = ...</span>
+
+        <span class="c1"># return Z</span>
+
+<div class="viewcode-block" id="LinearFunction.backward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.LinearFunction.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_Z</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Backpropagate the gradients of :math:`Z` through this linear layer.</span>
+
+<span class="sd">        The matrix ``grad_Z``, which we denote by</span>
+<span class="sd">        :math:`\delta_Z \in \mathbb{R}^{B \times N}`, contains the partial</span>
+<span class="sd">        derivatives of the scalar loss function with respect to each element</span>
+<span class="sd">        from the :meth:`forward` output matrix :math:`Z`.</span>
+
+<span class="sd">        This method backpropagates the global error (encoded in</span>
+<span class="sd">        :math:`\delta_Z`) to all input tensors of the :meth:`forward` method,</span>
+<span class="sd">        essentially computing :math:`\delta_A`, :math:`\delta_W`,</span>
+<span class="sd">        :math:`\delta_\mathbf{b}`.</span>
+
+<span class="sd">        As shown in the tutorial, these partial derivatives can be computed as</span>
+<span class="sd">        follows:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_A &amp;= \delta_Z W \\</span>
+<span class="sd">            \delta_W &amp;= \delta_Z^T A \\</span>
+<span class="sd">            \delta_\mathbf{b} &amp;= \sum_{b=1}^B \delta_{Z_{b,:}}</span>
+
+<span class="sd">        where :math:`\delta_{Z_{b,:}}` denotes the vector retrieved from the</span>
+<span class="sd">        :math:`b`-th row of :math:`\delta_Z`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method :meth:`forward`.</span>
+<span class="sd">            grad_Z: The backpropagated error :math:`\delta_Z`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (tuple): Tuple containing:</span>
+
+<span class="sd">            - **grad_A**: The derivative of the loss with respect to the input</span>
+<span class="sd">              activations, i.e., :math:`\delta_A`.</span>
+<span class="sd">            - **grad_W**: The derivative of the loss with respect to the weight</span>
+<span class="sd">              matrix, i.e., :math:`\delta_W`.</span>
+<span class="sd">            - **grad_b**: The derivative of the loss with respect to the bias</span>
+<span class="sd">              vector, i.e., :math:`\delta_\mathbf{b}`; or ``None`` if ``b`` was</span>
+<span class="sd">              passed as ``None`` to the :meth:`forward` method.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Gradients for input tensors are only computed if their keyword</span>
+<span class="sd">                ``requires_grad`` is set to ``True``, otherwise ``None`` is</span>
+<span class="sd">                returned for the corresponding Tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_A</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_W</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_b</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># We only need to compute gradients for tensors that are flagged to</span>
+        <span class="c1"># require gradients!</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># grad_A = ...</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># grad_W = ...</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># grad_b = ...</span>
+
+        <span class="k">return</span> <span class="n">grad_A</span><span class="p">,</span> <span class="n">grad_W</span><span class="p">,</span> <span class="n">grad_b</span></div></div>
+
+<div class="viewcode-block" id="linear_function"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.linear_function">[docs]</a><span class="k">def</span> <span class="nf">linear_function</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An alias for using class :class:`LinearFunction`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of method :meth:`LinearFunction.forward`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note, `apply()` doesn&#39;t allow keyword arguments, which is why we build</span>
+    <span class="c1"># this wrapper.</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">LinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">LinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SigmoidFunction"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.SigmoidFunction">[docs]</a><span class="k">class</span> <span class="nc">SigmoidFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a sigmoid non-linearity.</span>
+
+<span class="sd">    This ``Function`` applies a sigmoid_ function as non-linearity to a vector</span>
+<span class="sd">    of activations :math:`\mathbf{z}` (e.g., the output of a linear layer</span>
+<span class="sd">    :class:`LinearFunction`).</span>
+
+<span class="sd">    This function (denoted by :math:`\sigma(\cdot)`) operates element-wise when</span>
+<span class="sd">    computing the output activations :math:`\mathbf{a}`:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \mathbf{a} = \sigma(\mathbf{z})</span>
+
+<span class="sd">    Similarly to the notation used in the docstring of class</span>
+<span class="sd">    :class:`LinearFunction`, we consider a mini-batch of input activations</span>
+<span class="sd">    given as a matrix :math:`Z` and denote the corresponding output activations</span>
+<span class="sd">    by :math:`A`.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        Consider the output activation :math:`A^{(l-1)}` of layer :math:`l-1`.</span>
+<span class="sd">        Assuming a linear layer with sigmoid non-linearity, the output</span>
+<span class="sd">        activations :math:`A^{(l)}` of layer :math:`l` are computed as</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            A^{(l)} = \sigma(Z^{(l)}) = \sigma(A^{(l-1)} W^{(l), T} + b^{(l)})</span>
+
+<span class="sd">    .. _sigmoid: https://en.wikipedia.org/wiki/Sigmoid_function</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SigmoidFunction.forward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.SigmoidFunction.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">Z</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Applies the sigmoid function element-wise to ``Z``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method</span>
+<span class="sd">                :meth:`LinearFunction.forward`.</span>
+<span class="sd">            Z: The input activations to this non-linearity, i.e., the matrix</span>
+<span class="sd">                :math:`Z`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output activations :math:`A = \sigma(Z)`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># A = ...</span>
+
+        <span class="c1"># return A</span>
+
+<div class="viewcode-block" id="SigmoidFunction.backward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.SigmoidFunction.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_A</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Backpropagate gradients through sigmoid-nonlinearity.</span>
+
+<span class="sd">        In this method, we compute the backprop-error :math:`\delta_Z` given the</span>
+<span class="sd">        error :math:`\delta_A`, which is the derivative of the global scalar</span>
+<span class="sd">        loss with respect to the output of the :meth:`forward` method.</span>
+
+<span class="sd">        As shown in the tutorial, this partial derivative can be computed as</span>
+<span class="sd">        follows:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_Z = \delta_A \odot \sigma^{&#39;}(Z)</span>
+
+<span class="sd">        where the function :math:`\sigma^{&#39;}(\cdot)` applies the derivative of</span>
+<span class="sd">        the sigmoid non-linearity element-wise to its input tensor. The operator</span>
+<span class="sd">        :math:`\odot` denotes the Hadamard_ product (element-wise product).</span>
+<span class="sd">        </span>
+<span class="sd">        .. _Hadamard: https://en.wikipedia.org/wiki/Hadamard_product_(matrices)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method</span>
+<span class="sd">                :meth:`LinearFunction.forward`.</span>
+<span class="sd">            grad_A: The backpropagated error :math:`\delta_A`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The derivative of the loss with respect to the input activations</span>
+<span class="sd">            :math:`Z`, i.e., :math:`\delta_Z`.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Gradients for input tensors are only computed if their keyword</span>
+<span class="sd">                ``requires_grad`` is set to ``True``, otherwise ``None`` is</span>
+<span class="sd">                returned for the corresponding Tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Z</span><span class="p">,</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_Z</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># We only need to compute gradients for tensors that are flagged to</span>
+        <span class="c1"># require gradients!</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># grad_Z = ...</span>
+
+        <span class="k">return</span> <span class="n">grad_Z</span></div></div>
+
+<span class="n">sigmoid_function</span> <span class="o">=</span> <span class="n">SigmoidFunction</span><span class="o">.</span><span class="n">apply</span>
+<span class="sd">&quot;&quot;&quot;An alias for using class :class:`SigmoidFunction`.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MSELossFunction"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.MSELossFunction">[docs]</a><span class="k">class</span> <span class="nc">MSELossFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a mean-squared-error (MSE) loss.</span>
+
+<span class="sd">    Assuming a set of input activations in form of a matrix</span>
+<span class="sd">    :math:`A \in \mathbb{R}^{B \times M}`, where :math:`B` denotes the size of</span>
+<span class="sd">    the mini-batch and :math:`M` the size of each sample. Additionally, this</span>
+<span class="sd">    ``Function`` requires a set of target activations</span>
+<span class="sd">    :math:`T \in \mathbb{R}^{B \times M}`.</span>
+
+<span class="sd">    This method computes</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \mathcal{L}(A, T) = \frac{1}{B} \sum_{b = 1}^B \frac{1}{2} \lVert</span>
+<span class="sd">        A_{b,:} - T_{b,:} \rVert^2</span>
+
+<span class="sd">    where :math:`A_{b,:}` denotes the :math:`b`-th row of matrix :math:`A`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MSELossFunction.forward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.MSELossFunction.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the MSE loss between activations :math:`A` and targets</span>
+<span class="sd">        :math:`T`: :math:`\mathcal{L}(A, T)`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method</span>
+<span class="sd">                :meth:`LinearFunction.forward`.</span>
+<span class="sd">            A: The input activations, i.e., the matrix :math:`A`.</span>
+<span class="sd">            T: The target activations, i.e., the matrix :math:`T`.</span>
+
+<span class="sd">                .. note::</span>
+<span class="sd">                    Normally, targets will be constant values, that we do not</span>
+<span class="sd">                    wish to backpropagate through (i.e., the keyword</span>
+<span class="sd">                    ``requires_grad`` will be set to ``False``). For reasons of</span>
+<span class="sd">                    generality, this ``Function`` will also allow the</span>
+<span class="sd">                    backpropagation through targets, the keyword</span>
+<span class="sd">                    ``requires_grad`` of parameter ``T`` is set to ``True``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A scalar loss value ``L`` denoting the computed MSE value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># L = ...</span>
+
+        <span class="c1"># return L</span>
+
+<div class="viewcode-block" id="MSELossFunction.backward"><a class="viewcode-back" href="../../modules.html#lib.backprop_functions.MSELossFunction.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_L</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Backpropagate gradients through MSE loss.</span>
+
+<span class="sd">        The input ``grad_L`` is the derivative :math:`\delta_L` of the final</span>
+<span class="sd">        global scalar loss with respect to the scalar output of the</span>
+<span class="sd">        :meth:`forward` method.</span>
+<span class="sd">        If the :meth:`forward` is used to compute the final loss from which the</span>
+<span class="sd">        backpropagation algorithm starts, then PyTorch will pass the value ``1``</span>
+<span class="sd">        for the parameter ``grad_L``.</span>
+
+<span class="sd">        As shown in the tutorial, the partial derivative :math:`\delta_A` can be</span>
+<span class="sd">        computed via</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_A = \frac{1}{B} (A - T)</span>
+
+<span class="sd">        Hence, :math:`\delta_T` can be computed analoguously.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method</span>
+<span class="sd">                :meth:`LinearFunction.forward`.</span>
+<span class="sd">            grad_A: The backpropagated error :math:`\delta_A`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (tuple): Tuple containing:</span>
+
+<span class="sd">            - **grad_A**: The derivative of the loss with respect to the input</span>
+<span class="sd">              activations, i.e., :math:`\delta_A`.</span>
+<span class="sd">            - **grad_T**: The derivative of the loss with respect to the target</span>
+<span class="sd">              activations, i.e., :math:`\delta_T`.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Gradients for input tensors are only computed if their keyword</span>
+<span class="sd">                ``requires_grad`` is set to ``True``, otherwise ``None`` is</span>
+<span class="sd">                returned for the corresponding Tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_A</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_T</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># We only need to compute gradients for tensors that are flagged to</span>
+        <span class="c1"># require gradients!</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># grad_A = ...</span>
+
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div></div>
+            <span class="c1"># grad_T = ...</span>
+
+        <span class="c1"># return grad_A, grad_T</span>
+
+<span class="n">mse_loss</span> <span class="o">=</span> <span class="n">MSELossFunction</span><span class="o">.</span><span class="n">apply</span>
+<span class="sd">&quot;&quot;&quot;An alias for using class :class:`MSELossFunction`.&quot;&quot;&quot;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,234 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.mlp &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.mlp</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of a Multi-layer Perceptron (MLP)</span>
+<span class="sd">------------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.mlp` implements a simple fully-connected neural network,</span>
+<span class="sd">a so called multi-layer perceptron (MLP).</span>
+
+<span class="sd">Internally, it will make use of ``Functions`` implemented in module</span>
+<span class="sd">:mod:`lib.backprop_functions` to realize fully-connected linear layers and</span>
+<span class="sd">sigmoid activation functions.</span>
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.mlp.MLP</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="kn">from</span> <span class="nn">lib.linear_layer</span> <span class="k">import</span> <span class="n">LinearLayer</span>
+<span class="kn">from</span> <span class="nn">lib.linear_layer_fa</span> <span class="k">import</span> <span class="n">LinearLayerFA</span>
+<span class="kn">import</span> <span class="nn">lib.backprop_functions</span> <span class="k">as</span> <span class="nn">bf</span>
+<span class="kn">import</span> <span class="nn">lib.feedback_alignment_functions</span> <span class="k">as</span> <span class="nn">fa</span>
+
+<div class="viewcode-block" id="MLP"><a class="viewcode-back" href="../../modules.html#lib.mlp.MLP">[docs]</a><span class="k">class</span> <span class="nc">MLP</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implementation of a fully-connected neural network with sigmoid non-</span>
+<span class="sd">    linearities as activation functions after all hidden layers.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        depth (int): Number of hidden layers.</span>
+<span class="sd">        fa (bool): True if feedback alignment should be used to train the</span>
+<span class="sd">            network.</span>
+<span class="sd">        linear (bool): True if the network should be linear (no sigmoid</span>
+<span class="sd">            nonlinearities).</span>
+<span class="sd">        linear_layers (nn.ModuleList): A list containing the linear layers of</span>
+<span class="sd">            the network.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n_in (int): Network input size.</span>
+<span class="sd">        n_out (int): Network output size.</span>
+<span class="sd">        n_hidden (list): Size of each hidden layer of the network. This</span>
+<span class="sd">            argument implicitly defines the :attr:`depth` of the network.</span>
+<span class="sd">        fa (bool): True if feedback alignment should be used to train the</span>
+<span class="sd">            network.</span>
+<span class="sd">        linear (bool): True if the network should be linear (no sigmoid</span>
+<span class="sd">            nonlinearities).</span>
+<span class="sd">        gain (float): A scaling term used for initializing the forward weights</span>
+<span class="sd">            of the network. Default 1.0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_in</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_out</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_hidden</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="n">fa</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">gain</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_depth</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fa</span> <span class="o">=</span> <span class="n">fa</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_linear</span> <span class="o">=</span> <span class="n">linear</span>
+
+        <span class="n">n_all</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_in</span><span class="p">]</span> <span class="o">+</span> <span class="n">n_hidden</span> <span class="o">+</span> <span class="p">[</span><span class="n">n_out</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_linear_layers</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">fa</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_all</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_linear_layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LinearLayerFA</span><span class="p">(</span><span class="n">n_all</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
+                                                         <span class="n">n_all</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_all</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_linear_layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LinearLayer</span><span class="p">(</span><span class="n">n_all</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_all</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                       <span class="n">gain</span><span class="o">=</span><span class="n">gain</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">depth</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`depth`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_depth</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">fa</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`fa`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fa</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">linear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`fa`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linear</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">linear_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`linear_layers`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linear_layers</span>
+
+<div class="viewcode-block" id="MLP.forward"><a class="viewcode-back" href="../../modules.html#lib.mlp.MLP.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the output :math:`y` of the network.</span>
+
+<span class="sd">        After every linear hidden layer a sigmoid nonlinearity will be applied</span>
+<span class="sd">        if the :attr:`linear` is not ``True``.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            The output of the network will be linear, i.e., no activation</span>
+<span class="sd">            function is applied to the linear layer that connects the last</span>
+<span class="sd">            hidden layer with the output layer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: The input to the network.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output ``y`` of the network.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_linear_layers</span><span class="p">):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linear</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="p">:</span>
+                    <span class="n">y</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">sigmoid_function</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">y</span></div></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

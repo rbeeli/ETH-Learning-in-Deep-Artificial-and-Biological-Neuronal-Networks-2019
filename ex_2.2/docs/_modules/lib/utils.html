@@ -1,0 +1,358 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.utils &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A collection of helper functions</span>
+<span class="sd">--------------------------------</span>
+
+<span class="sd">The module :mod:`lib.utils` contains several general purpose utilities and</span>
+<span class="sd">helper functions.</span>
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.utils.regression_cubic_poly</span>
+<span class="sd">    lib.utils.generate_data_from_teacher</span>
+<span class="sd">    lib.utils.RegressionDataset</span>
+<span class="sd">    lib.utils.plot_predictions</span>
+<span class="sd">    lib.utils.compute_matrix_angle</span>
+<span class="sd">    lib.utils.plot_angles</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="k">import</span> <span class="n">Dataset</span>
+
+<span class="kn">from</span> <span class="nn">lib.mlp</span> <span class="k">import</span> <span class="n">MLP</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">rc</span>
+
+<div class="viewcode-block" id="regression_cubic_poly"><a class="viewcode-back" href="../../modules.html#lib.utils.regression_cubic_poly">[docs]</a><span class="k">def</span> <span class="nf">regression_cubic_poly</span><span class="p">(</span><span class="n">num_train</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_test</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">train_domain</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span><span class="o">-</span><span class="mi">4</span><span class="p">),</span>
+                          <span class="n">test_domain</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">rseed</span><span class="o">=</span><span class="mi">42</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generate a dataset for a 1D regression task with a cubic polynomial.</span>
+
+<span class="sd">    The regression task modelled here is :math:`y = x^3 + \epsilon`,</span>
+<span class="sd">    where :math:`\epsilon \sim \mathcal{N}(0, 9I)`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_train (int): Number of training samples.</span>
+<span class="sd">        num_test (int): Number of test samples.</span>
+<span class="sd">        train_domain (tuple): Input domain for training samples.</span>
+<span class="sd">        test_domain (tuple): Input domain for training samples.</span>
+<span class="sd">        rseed (int): To ensure reproducibility, the random seed for the data</span>
+<span class="sd">            generation should be decoupled from the random seed of the</span>
+<span class="sd">            simulation. Therefore, a new :class:`numpy.random.RandomState` is</span>
+<span class="sd">            created for the purpose of generating the data.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (tuple): Tuple containing:</span>
+
+<span class="sd">        - **train_x**: Generated training inputs.</span>
+<span class="sd">        - **test_x**: Generated test inputs.</span>
+<span class="sd">        - **train_y**: Generated training outputs.</span>
+<span class="sd">        - **test_y**: Generated test outputs.</span>
+
+<span class="sd">        Data is returned in form of 2D arrays of class :class:`numpy.ndarray`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">rseed</span><span class="p">)</span>
+
+    <span class="n">train_domain</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+
+    <span class="n">train_x</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="n">train_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">high</span><span class="o">=</span><span class="n">train_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                               <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_train</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">test_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">test_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stop</span><span class="o">=</span><span class="n">test_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                         <span class="n">num</span><span class="o">=</span><span class="n">num_test</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num_test</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="n">map_function</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span> <span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mf">3.</span><span class="p">)</span>
+    <span class="n">train_y</span> <span class="o">=</span> <span class="n">map_function</span><span class="p">(</span><span class="n">train_x</span><span class="p">)</span>
+    <span class="n">test_y</span> <span class="o">=</span> <span class="n">map_function</span><span class="p">(</span><span class="n">test_x</span><span class="p">)</span>
+
+    <span class="c1"># Add noise to training outputs.</span>
+    <span class="n">train_eps</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_train</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">train_y</span> <span class="o">+=</span> <span class="n">train_eps</span>
+
+    <span class="k">return</span> <span class="n">train_x</span><span class="p">,</span> <span class="n">test_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">test_y</span></div>
+
+<div class="viewcode-block" id="generate_data_from_teacher"><a class="viewcode-back" href="../../modules.html#lib.utils.generate_data_from_teacher">[docs]</a><span class="k">def</span> <span class="nf">generate_data_from_teacher</span><span class="p">(</span><span class="n">num_train</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">num_test</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_in</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">n_out</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                               <span class="n">n_hidden</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span> <span class="n">linear</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate data for a regression task through a teacher model.</span>
+
+<span class="sd">    This function generates random input patterns and creates a random MLP</span>
+<span class="sd">    (fully-connected neural network), that is used as a teacher model. I.e., the</span>
+<span class="sd">    generated input data is fed through the teacher model to produce target</span>
+<span class="sd">    outputs. The so produced dataset can be used to train and assess a</span>
+<span class="sd">    student model. Hence, a learning procedure can be verified by validating its</span>
+<span class="sd">    capability of training a student network to mimic a given teacher network.</span>
+
+<span class="sd">    Input samples will be uniformly drawn from a unit cube.</span>
+
+<span class="sd">    .. warning::</span>
+<span class="sd">        Since this is a synthetic dataset that uses random number generators,</span>
+<span class="sd">        the generated dataset depends on externally configured random seeds</span>
+<span class="sd">        (and in case of GPU computation, it also depends on whether CUDA</span>
+<span class="sd">        operations are performed in a derterministic mode).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_train (int): Number of training samples.</span>
+<span class="sd">        num_test (int): Number of test samples.</span>
+<span class="sd">        n_in (int): Passed as argument ``n_in`` to class :class:`lib.mlp.MLP`</span>
+<span class="sd">            when building the teacher model.</span>
+<span class="sd">        n_out (int): Passed as argument ``n_out`` to class :class:`lib.mlp.MLP`</span>
+<span class="sd">            when building the teacher model.</span>
+<span class="sd">        n_hidden (list): Passed as argument ``n_hidden`` to class</span>
+<span class="sd">            :class:`lib.mlp.MLP` when building the teacher model.</span>
+<span class="sd">        linear (bool): Passed as argument ``linear`` to</span>
+<span class="sd">            class :class:`lib.mlp.MLP` when building the teacher model</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        See return values of function :func:`regression_cubic_poly`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># FIXME Disentangle the random seeds set in a simulation from the one used</span>
+    <span class="c1"># to generate synthetic datasets.</span>
+    <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span>
+
+    <span class="n">train_x</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_train</span><span class="p">,</span> <span class="n">n_in</span><span class="p">))</span>
+    <span class="n">test_x</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_train</span><span class="p">,</span> <span class="n">n_in</span><span class="p">))</span>
+
+    <span class="c1"># Note: make sure that gain is high, such that the neurons are pushed into</span>
+    <span class="c1"># nonlinear regime. Otherwise we have a linear dataset</span>
+    <span class="n">teacher</span> <span class="o">=</span> <span class="n">MLP</span><span class="p">(</span><span class="n">n_in</span><span class="o">=</span><span class="n">n_in</span><span class="p">,</span> <span class="n">n_out</span><span class="o">=</span><span class="n">n_out</span><span class="p">,</span> <span class="n">n_hidden</span><span class="o">=</span><span class="n">n_hidden</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="n">linear</span><span class="p">,</span>
+                  <span class="n">gain</span><span class="o">=</span><span class="mf">3.</span><span class="p">)</span>
+
+    <span class="n">train_y</span> <span class="o">=</span> <span class="n">teacher</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">train_x</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">())</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+        <span class="n">numpy</span><span class="p">()</span>
+    <span class="n">test_y</span> <span class="o">=</span> <span class="n">teacher</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">test_x</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">())</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span> \
+        <span class="n">numpy</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">train_x</span><span class="p">,</span> <span class="n">test_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">test_y</span></div>
+
+<div class="viewcode-block" id="RegressionDataset"><a class="viewcode-back" href="../../modules.html#lib.utils.RegressionDataset">[docs]</a><span class="k">class</span> <span class="nc">RegressionDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A simple regression dataset.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inputs (numpy.ndarray): The input samples.</span>
+<span class="sd">        outputs (numpy.ndarray): The output samples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_tensor</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="n">batch_in</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">batch_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">return</span> <span class="n">batch_in</span><span class="p">,</span> <span class="n">batch_out</span></div>
+
+<div class="viewcode-block" id="plot_predictions"><a class="viewcode-back" href="../../modules.html#lib.utils.plot_predictions">[docs]</a><span class="k">def</span> <span class="nf">plot_predictions</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">test_loader</span><span class="p">,</span> <span class="n">net</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Plot the predictions of 1D regression tasks.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of function :func:`main.test`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">test_loader</span><span class="o">.</span><span class="n">dataset</span>
+
+    <span class="k">assert</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="c1"># Note, for simplicity, we assume that the dataset is small and we don&#39;t</span>
+        <span class="c1"># have t collect the predictions by iterating over mini-batches.</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Predictions in 1D regression task&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Target function&#39;</span><span class="p">,</span>
+             <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;dashed&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Predictions&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="compute_matrix_angle"><a class="viewcode-back" href="../../modules.html#lib.utils.compute_matrix_angle">[docs]</a><span class="k">def</span> <span class="nf">compute_matrix_angle</span><span class="p">(</span><span class="n">C</span><span class="p">,</span><span class="n">D</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the angle between the two given matrices in degrees.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        C: The first matrix.</span>
+<span class="sd">        D: The second matrix (must be of the same size as C).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The angle in degrees between the two given matrices.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assert matrices have same dimensions</span>
+    <span class="k">assert</span> <span class="n">C</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">D</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+
+    <span class="n">C_vectorized</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">D_vectorized</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">cosine_angle</span> <span class="o">=</span> <span class="n">C_vectorized</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">D_vectorized</span><span class="p">)</span><span class="o">/</span>\
+                   <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">C_vectorized</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span>\
+                    <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">D_vectorized</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">180</span><span class="o">/</span><span class="mf">3.1415</span><span class="o">*</span><span class="n">torch</span><span class="o">.</span><span class="n">acos</span><span class="p">(</span><span class="n">cosine_angle</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="plot_angles"><a class="viewcode-back" href="../../modules.html#lib.utils.plot_angles">[docs]</a><span class="k">def</span> <span class="nf">plot_angles</span><span class="p">(</span><span class="n">angle_tensor</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Show a plot of the trajectory of the angle between two matrices</span>
+<span class="sd">    in function of time.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        angle_tensor (torch.Tensor): A tensor containing the angles for</span>
+<span class="sd">            each layer per epoch.</span>
+<span class="sd">        title (str): The title of the figure.</span>
+<span class="sd">        ylabel(str): The lable for the y-axis of the figure.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="c1"># angles = torch.var.detach(angle_tensor).numpy()</span>
+    <span class="n">rc</span><span class="p">(</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="n">usetex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">angle_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="n">nb_layers</span> <span class="o">=</span> <span class="n">angles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb_layers</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">nb_layers</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">angles</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="n">ylabel</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="n">nb_layers</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;output layer&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;hidden layer </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">hspace</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

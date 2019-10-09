@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.feedback_alignment_functions &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.feedback_alignment_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Alexander Meulemans</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Adding custom functions for feedback alignment to PyTorch&#39;s autograd</span>
+<span class="sd">--------------------------------------------------------------------</span>
+<span class="sd">.. note::</span>
+<span class="sd">    The forward and backward functions for a linear layer, sigmoid layer</span>
+<span class="sd">    and MSE loss were already implemented in tutorial 2.1. In this tutorial,</span>
+<span class="sd">    we will make a new class for a linear layer that applies feedback alignment</span>
+<span class="sd">    for its backward function. Most of the code for the forward and backward</span>
+<span class="sd">    function of the normal linear layer can be reused.</span>
+
+
+<span class="sd">The module :mod:`lib.feedback_alingment_functions` contains custom</span>
+<span class="sd">implementations of the linear layers used in the neural network,</span>
+<span class="sd">that are compatible with PyTorch its autograd_ package.</span>
+
+<span class="sd">Please checkout the corresponding documentation of class</span>
+<span class="sd">:class:`torch.autograd.Function`.</span>
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.feedback_alignment_functions.LinearFunctionFA</span>
+<span class="sd">    lib.feedback_alignment_functions.linear_function_fa</span>
+
+<span class="sd">.. _autograd:</span>
+<span class="sd">    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+
+<div class="viewcode-block" id="LinearFunctionFA"><a class="viewcode-back" href="../../modules.html#lib.feedback_alignment_functions.LinearFunctionFA">[docs]</a><span class="k">class</span> <span class="nc">LinearFunctionFA</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a fully-connected layer w/o activation function that</span>
+<span class="sd">    will use feedback alignment (FA) as a training method.</span>
+
+<span class="sd">    This class is a ``Function`` that behaves similar to PyTorch&#39;s class</span>
+<span class="sd">    :class:`torch.nn.Linear`, but it has a different backward function that</span>
+<span class="sd">    implements FA. Since this class implements the interface</span>
+<span class="sd">    :class:`torch.autograd.Function`, we can use it to specify a custom</span>
+<span class="sd">    backpropagation behavior.</span>
+
+<span class="sd">    Assuming column vectors: layer input :math:`\mathbf{a} \in \mathbb{R}^M`,</span>
+<span class="sd">    bias vector :math:`\mathbf{b} \in \mathbb{R}^N` and a weight matrix</span>
+<span class="sd">    :math:`W \in \mathbb{R}^{N \times M}`, this layer simply computes</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-single-sample-fa</span>
+
+<span class="sd">        \mathbf{z} = W \mathbf{a} + \mathbf{b}</span>
+
+<span class="sd">    (or :math:`\mathbf{z} = W \mathbf{a}` if :math:`\mathbf{b}` is ``None``).</span>
+
+<span class="sd">    Note, since we want to process mini-batches (containing :math:`B` samples</span>
+<span class="sd">    each), the input to the :meth:`forward` method is actually a set of samples</span>
+<span class="sd">    :math:`\mathbf{a}` collected into a matrix</span>
+<span class="sd">    :math:`A \in \mathbb{R}^{B \times M}`.</span>
+
+<span class="sd">    We additionally introduce the matrix</span>
+<span class="sd">    :math:`\tilde{B} \in \mathbb{R}^{B \times N}` which simply contains copies</span>
+<span class="sd">    of the bias vector :math:`\mathbf{b}` in its rows.</span>
+
+<span class="sd">    The mathematical operation described for single samples in eq.</span>
+<span class="sd">    :eq:`eq-single-sample-fa`, is stated for a the case of mini-batches below</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-mini-batch-fa</span>
+
+<span class="sd">        Z = A W^T + \tilde{B}</span>
+
+<span class="sd">    where :math:`Z \in \mathbb{R}^{B \times N}` is the output matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LinearFunctionFA.forward"><a class="viewcode-back" href="../../modules.html#lib.feedback_alignment_functions.LinearFunctionFA.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the output of a linear layer.</span>
+
+<span class="sd">        This method implements eq. :eq:`eq-mini-batch-fa`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: A context. Should be used to store activations which are needed</span>
+<span class="sd">                in the backward pass.</span>
+<span class="sd">            A: A mini-batch of input activations :math:`A`.</span>
+<span class="sd">            W: The weight matrix :math:`W`.</span>
+<span class="sd">            B: The random feedback weight matrix :math:`B`. This matrix is not</span>
+<span class="sd">                used in the forward pass, but will be saved in ctx for the</span>
+<span class="sd">                backward pass. Note that :math:`B` needs to have the same</span>
+<span class="sd">                dimensions as :math:`W^T`</span>
+<span class="sd">            b (optional): The bias vector :math:`\mathbf{b}`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output activations :math:`Z` as defined by eq.</span>
+<span class="sd">            :eq:`eq-mini-batch-fa`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+       <span class="c1"># Z = ...</span>
+
+       <span class="c1"># return Z</span>
+
+<div class="viewcode-block" id="LinearFunctionFA.backward"><a class="viewcode-back" href="../../modules.html#lib.feedback_alignment_functions.LinearFunctionFA.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_Z</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;propagate the error signals for :math:`Z` through this linear layer,</span>
+<span class="sd">        according to the feedback alignment method.</span>
+
+<span class="sd">        The matrix ``grad_Z``, which we denote by</span>
+<span class="sd">        :math:`\delta_Z \in \mathbb{R}^{B \times N}`, contains the error signals</span>
+<span class="sd">        of the scalar loss function with respect to each element</span>
+<span class="sd">        from the :meth:`forward` output matrix :math:`Z`, propagated by</span>
+<span class="sd">        feedback alignment.</span>
+
+<span class="sd">        This method propagates the global error (encoded in</span>
+<span class="sd">        :math:`\delta_Z`) to all input tensors of the :meth:`forward` method,</span>
+<span class="sd">        essentially computing :math:`\delta_A`, :math:`\delta_W`,</span>
+<span class="sd">        :math:`\delta_\mathbf{b}`.</span>
+
+<span class="sd">        As shown in the tutorial, these partial derivatives can be computed as</span>
+<span class="sd">        follows:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_A &amp;= \delta_Z B^T \\</span>
+<span class="sd">            \delta_W &amp;= \delta_Z^T A \\</span>
+<span class="sd">            \delta_\mathbf{b} &amp;= \sum_{b=1}^B \delta_{Z_{b,:}}</span>
+
+<span class="sd">        where :math:`\delta_{Z_{b,:}}` denotes the vector retrieved from the</span>
+<span class="sd">        :math:`b`-th row of :math:`\delta_Z`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method :meth:`forward`.</span>
+<span class="sd">            grad_Z: The propagated error :math:`\delta_Z`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (tuple): Tuple containing:</span>
+
+<span class="sd">            - **grad_A**: The propagated error signal according to</span>
+<span class="sd">                feedback alignment, i.e., :math:`\delta_A`.</span>
+<span class="sd">            - **grad_W**: The direction for the weight update</span>
+<span class="sd">              , i.e., :math:`\delta_W`.</span>
+<span class="sd">            - **grad_B**: This output will always be ``None``, but needs to be</span>
+<span class="sd">                there for complying with the Pytorch framework.</span>
+<span class="sd">            - **grad_b**: The direction for the bias update</span>
+<span class="sd">                i.e., :math:`\delta_\mathbf{b}`; or ``None`` if ``b`` was</span>
+<span class="sd">                passed as ``None`` to the :meth:`forward` method.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Error signals/update directions for input tensors</span>
+<span class="sd">                are only computed if their keyword</span>
+<span class="sd">                ``requires_grad`` is set to ``True``, otherwise ``None`` is</span>
+<span class="sd">                returned for the corresponding Tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_A</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_W</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_B</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_b</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># We only need to compute gradients for tensors that are flagged to</span>
+        <span class="c1"># require gradients!</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+        <span class="c1"># grad_A = ...</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+        <span class="c1"># grad_W = ...</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+        <span class="c1"># grad_b = ...</span>
+
+        <span class="k">return</span> <span class="n">grad_A</span><span class="p">,</span> <span class="n">grad_W</span><span class="p">,</span> <span class="n">grad_B</span><span class="p">,</span> <span class="n">grad_b</span></div></div>
+
+<div class="viewcode-block" id="linear_function_fa"><a class="viewcode-back" href="../../modules.html#lib.feedback_alignment_functions.linear_function_fa">[docs]</a><span class="k">def</span> <span class="nf">linear_function_fa</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An alias for using class :class:`LinearFunctionFA`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of method :meth:`LinearFunctionFA.forward`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note, `apply()` doesn&#39;t allow keyword arguments, which is why we build</span>
+    <span class="c1"># this wrapper.</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">LinearFunctionFA</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">LinearFunctionFA</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

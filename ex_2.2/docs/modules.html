@@ -1,0 +1,1286 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>API &#8212; Tutorial 2  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Testing" href="tests.html" />
+    <link rel="prev" title="Learning in deep artificial and biological neuronal networks" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="api">
+<span id="api-reference-label"></span><h1><a class="toc-backref" href="#id2">API</a><a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#api" id="id2">API</a></p>
+<ul>
+<li><p><a class="reference internal" href="#controller-for-simulations" id="id3">Controller for simulations</a></p>
+<ul>
+<li><p><a class="reference internal" href="#student-teacher-model" id="id4">Student-teacher model</a></p></li>
+<li><p><a class="reference internal" href="#d-polynomial-regression" id="id5">1D polynomial regression</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#adding-custom-functions-to-pytorch-s-autograd" id="id6">Adding custom functions to PyTorch’s autograd</a></p></li>
+<li><p><a class="reference internal" href="#adding-custom-functions-for-feedback-alignment-to-pytorch-s-autograd" id="id7">Adding custom functions for feedback alignment to PyTorch’s autograd</a></p></li>
+<li><p><a class="reference internal" href="#a-linear-layer-module-that-maintains-its-own-parameters" id="id8">A linear layer module that maintains its own parameters</a></p></li>
+<li><p><a class="reference internal" href="#a-linear-layer-module-for-fa-that-maintains-its-own-parameters" id="id9">A linear layer module for FA that maintains its own parameters</a></p></li>
+<li><p><a class="reference internal" href="#implementation-of-a-multi-layer-perceptron-mlp" id="id10">Implementation of a Multi-layer Perceptron (MLP)</a></p></li>
+<li><p><a class="reference internal" href="#a-collection-of-helper-functions" id="id11">A collection of helper functions</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>The API describes all functionalities implemented for this exercise. Of particular interest is the <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> script, which can be used to validate an implementation (see <a class="reference internal" href="tests.html#tests-reference-label"><span class="std std-ref">testing</span></a> for how to properly verify your implementation).</p>
+<p>The module <a class="reference internal" href="#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a> contains the missing functionalities that have to be implemented. You have to <strong>precisely follow the interface as described in section</strong> <a class="reference internal" href="#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a> when implementing the missing functionalities!</p>
+<span class="target" id="module-main"></span><div class="section" id="controller-for-simulations">
+<h2><a class="toc-backref" href="#id3">Controller for simulations</a><a class="headerlink" href="#controller-for-simulations" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> is an executable script that controls the simulations
+(i.e., the training of regression tasks).</p>
+<p>For more usage information, please check out</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python3 main --help
+</pre></div>
+</div>
+<p>There are two distinct regression tasks that we consider here.</p>
+<div class="section" id="student-teacher-model">
+<h3><a class="toc-backref" href="#id4">Student-teacher model</a><a class="headerlink" href="#student-teacher-model" title="Permalink to this headline">¶</a></h3>
+<p>The data for this regression task is generated by a teacher model. Once random
+input patterns are generated, a teacher network is used to map these inputs
+onto target outputs. In this way, a dataset consisting of inputs and outputs is
+generated, that represents a nonlinear regression task (assuming the teacher
+network is nonlinear). For more specifics on the dataset generation, have a look
+at the function <a class="reference internal" href="#lib.utils.generate_data_from_teacher" title="lib.utils.generate_data_from_teacher"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.utils.generate_data_from_teacher()</span></code></a>.</p>
+<p>Once the dataset is generated, a student network can be trained to mimic the
+behavior of the teacher network. In case the teacher and student share an
+identical architecture, we know there is a perfect solution that can be found
+by the employed optimization algorithm (we just need to find the weights of
+the teacher model when training the student model).</p>
+<p>We will be looking at different architectures for student and teacher model such
+that it is likely that we consider a challenging regression task.</p>
+</div>
+<div class="section" id="d-polynomial-regression">
+<h3><a class="toc-backref" href="#id5">1D polynomial regression</a><a class="headerlink" href="#d-polynomial-regression" title="Permalink to this headline">¶</a></h3>
+<p>In case of 1D regression tasks, the result can be visualized to a human, who
+can assess the quality of the optimizer.</p>
+<p>An example 1D regression task can be retrieved using the function
+<a class="reference internal" href="#lib.utils.regression_cubic_poly" title="lib.utils.regression_cubic_poly"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.utils.regression_cubic_poly()</span></code></a>.</p>
+<p>This script can be used to train on this dataset via the option
+<code class="docutils literal notranslate"><span class="pre">--polynomial_regression</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python main.py --polynomial_regression
+</pre></div>
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#main.run" title="main.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.run</span></code></a>()</p></td>
+<td><p>Run the script.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.train</span></code></a>(args, device, train_loader, net)</p></td>
+<td><p>Train the given network on the given (regression) dataset.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="main.run">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the script.</p>
+<ul class="simple">
+<li><p>Parsing command-line arguments</p></li>
+<li><p>Creating synthetic regression data</p></li>
+<li><p>Initiating training process</p></li>
+<li><p>Testing final network</p></li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.test">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">test</code><span class="sig-paren">(</span><em class="sig-param">device</em>, <em class="sig-param">test_loader</em>, <em class="sig-param">net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>test a train network by computing the MSE on the test set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-func docutils literal notranslate"><span class="pre">train()</span></code></a>.</p></li>
+<li><p><strong>test_loader</strong> (<a class="reference external" href="https://pytorch.org/docs/master/data.html#torch.utils.data.DataLoader" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><em>torch.utils.data.DataLoader</em></a>) – The data handler for
+test data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The mean-squared error for the test set <code class="docutils literal notranslate"><span class="pre">test_loader</span></code> when
+using the network <code class="docutils literal notranslate"><span class="pre">net</span></code>. Note, the <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<a class="reference internal" href="#lib.backprop_functions.mse_loss" title="lib.backprop_functions.mse_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.backprop_functions.mse_loss()</span></code></a> is used to compute the MSE
+value.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.train">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">train</code><span class="sig-paren">(</span><em class="sig-param">args</em>, <em class="sig-param">device</em>, <em class="sig-param">train_loader</em>, <em class="sig-param">net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the given network on the given (regression) dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.7)"><em>argparse.Namespace</em></a>) – The command-line arguments.</p></li>
+<li><p><strong>device</strong> – The PyTorch device to be used.</p></li>
+<li><p><strong>train_loader</strong> (<a class="reference external" href="https://pytorch.org/docs/master/data.html#torch.utils.data.DataLoader" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><em>torch.utils.data.DataLoader</em></a>) – The data handler for
+training data.</p></li>
+<li><p><strong>net</strong> – The (student) neural network.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<span class="target" id="module-lib.backprop_functions"></span><div class="section" id="adding-custom-functions-to-pytorch-s-autograd">
+<h2><a class="toc-backref" href="#id6">Adding custom functions to PyTorch’s autograd</a><a class="headerlink" href="#adding-custom-functions-to-pytorch-s-autograd" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a> contains custom implementations of
+neural network components (layers, activation functions, loss functions, …),
+that are compatible with PyTorch its <a class="reference external" href="https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html">autograd</a> package.</p>
+<p>A new functionality can be added to <a class="reference external" href="https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html">autograd</a> by creating a subclass of class
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>. In particular, we have to implement the
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.forward" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.forward()</span></code></a> method (which computes the output of a
+differentiable function) and the <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.backward" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.backward()</span></code></a>
+method (which computes the partial derivatives of the output of the implemented
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.forward" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.forward()</span></code></a> method with respect to all input tensors
+that are flagged to require gradients).</p>
+<p>Please checkout the corresponding documentation of class
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code></a></p></td>
+<td><p>Implementation of a fully-connected layer w/o activation function.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.backprop_functions.linear_function" title="lib.backprop_functions.linear_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.linear_function</span></code></a>(A, W)</p></td>
+<td><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunction</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.backprop_functions.SigmoidFunction" title="lib.backprop_functions.SigmoidFunction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.SigmoidFunction</span></code></a></p></td>
+<td><p>Implementation of a sigmoid non-linearity.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.backprop_functions.sigmoid_function" title="lib.backprop_functions.sigmoid_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.sigmoid_function</span></code></a></p></td>
+<td><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.SigmoidFunction" title="lib.backprop_functions.SigmoidFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">SigmoidFunction</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.backprop_functions.MSELossFunction" title="lib.backprop_functions.MSELossFunction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.MSELossFunction</span></code></a></p></td>
+<td><p>Implementation of a mean-squared-error (MSE) loss.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.backprop_functions.mse_loss" title="lib.backprop_functions.mse_loss"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.backprop_functions.mse_loss</span></code></a></p></td>
+<td><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.MSELossFunction" title="lib.backprop_functions.MSELossFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">MSELossFunction</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.backprop_functions.LinearFunction">
+<em class="property">class </em><code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">LinearFunction</code><a class="reference internal" href="_modules/lib/backprop_functions.html#LinearFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.LinearFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.function.Function</span></code></p>
+<p>Implementation of a fully-connected layer w/o activation function.</p>
+<p>This class is a <code class="docutils literal notranslate"><span class="pre">Function</span></code> that behaves just like PyTorch’s class
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>. Since this class implements the interface
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>, we can use it to specify a custom
+backpropagation behavior.</p>
+<p>In this specific case, the <code class="docutils literal notranslate"><span class="pre">Function</span></code> shall behave just as in classic
+backpropagation (i.e., it shall behave identical to the proprietory PyTorch
+implementation).</p>
+<p>Assuming column vectors: layer input <img class="math" src="_images/math/76a7ef556c29ca69bfa914686b1019d12a09f3a8.png" alt="\mathbf{a} \in \mathbb{R}^M"/>,
+bias vector <img class="math" src="_images/math/3ecb2f0a9ce0de89e62716e6e0253e040bacda0d.png" alt="\mathbf{b} \in \mathbb{R}^N"/> and a weight matrix
+<img class="math" src="_images/math/53cac5cfba90a3a4521c5900779d18bca32a3017.png" alt="W \in \mathbb{R}^{N \times M}"/>, this layer simply computes</p>
+<div class="math" id="equation-eq-single-sample">
+<p><span class="eqno">(1)<a class="headerlink" href="#equation-eq-single-sample" title="Permalink to this equation">¶</a></span><img src="_images/math/5470ced866b39977f17648c0a5d6b57c50fcfd78.png" alt="\mathbf{z} = W \mathbf{a} + \mathbf{b}"/></p>
+</div><p>(or <img class="math" src="_images/math/5d7ef7cfcb6e0263cbfe0334d45c22bdc066ab52.png" alt="\mathbf{z} = W \mathbf{a}"/> if <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> is <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
+<p>Note, since we want to process mini-batches (containing <img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/> samples
+each), the input to the <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method is actually a set of samples
+<img class="math" src="_images/math/ee06d542263974017a04fb2dc754e9708a8f749f.png" alt="\mathbf{a}"/> collected into a matrix
+<img class="math" src="_images/math/905a22c73108a47a9c8b8d54d632d1aba2f34603.png" alt="A \in \mathbb{R}^{B \times M}"/>.</p>
+<p>We additionally introduce the matrix
+<img class="math" src="_images/math/0b38acaf0dd4575346fa9c050906864838c1251e.png" alt="\tilde{B} \in \mathbb{R}^{B \times N}"/> which simply contains copies
+of the bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> in its rows.</p>
+<p>The mathematical operation described for single samples in eq.
+<a class="reference internal" href="#equation-eq-single-sample">(1)</a>, is stated for a the case of mini-batches below</p>
+<div class="math" id="equation-eq-mini-batch">
+<p><span class="eqno">(2)<a class="headerlink" href="#equation-eq-mini-batch" title="Permalink to this equation">¶</a></span><img src="_images/math/1444f455f1be3c8c40afb115f02319739137096a.png" alt="Z = A W^T + \tilde{B}"/></p>
+</div><p>where <img class="math" src="_images/math/04fe8b412b9f8aa0722605a53f7ae69e7ea94e38.png" alt="Z \in \mathbb{R}^{B \times N}"/> is the output matrix.</p>
+<dl class="method">
+<dt id="lib.backprop_functions.LinearFunction.backward">
+<em class="property">static </em><code class="sig-name descname">backward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">grad_Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#LinearFunction.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.LinearFunction.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backpropagate the gradients of <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/> through this linear layer.</p>
+<p>The matrix <code class="docutils literal notranslate"><span class="pre">grad_Z</span></code>, which we denote by
+<img class="math" src="_images/math/4b23c2ee60e00adaa1d48db1cddfdfc2ca2b3c0d.png" alt="\delta_Z \in \mathbb{R}^{B \times N}"/>, contains the partial
+derivatives of the scalar loss function with respect to each element
+from the <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> output matrix <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/>.</p>
+<p>This method backpropagates the global error (encoded in
+<img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>) to all input tensors of the <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method,
+essentially computing <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>, <img class="math" src="_images/math/9b05767c67d84c42c030011d1a3cb2870ec8e99d.png" alt="\delta_W"/>,
+<img class="math" src="_images/math/7bb9e6000c409f7455fd0d9b0f8732673985a53e.png" alt="\delta_\mathbf{b}"/>.</p>
+<p>As shown in the tutorial, these partial derivatives can be computed as
+follows:</p>
+<div class="math">
+<p><img src="_images/math/8f293b635b3d6b000b0ceabd50235f39bc568523.png" alt="\delta_A &amp;= \delta_Z W \\
+\delta_W &amp;= \delta_Z^T A \\
+\delta_\mathbf{b} &amp;= \sum_{b=1}^B \delta_{Z_{b,:}}"/></p>
+</div><p>where <img class="math" src="_images/math/960faea30dd56ccf9a18b07a58e8a81f7cd60ac4.png" alt="\delta_{Z_{b,:}}"/> denotes the vector retrieved from the
+<img class="math" src="_images/math/68c7c8c65602677ab56cf7fd88002023f0edc575.png" alt="b"/>-th row of <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a>.</p></li>
+<li><p><strong>grad_Z</strong> – The backpropagated error <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>grad_A</strong>: The derivative of the loss with respect to the input
+activations, i.e., <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>.</p></li>
+<li><p><strong>grad_W</strong>: The derivative of the loss with respect to the weight
+matrix, i.e., <img class="math" src="_images/math/9b05767c67d84c42c030011d1a3cb2870ec8e99d.png" alt="\delta_W"/>.</p></li>
+<li><p><strong>grad_b</strong>: The derivative of the loss with respect to the bias
+vector, i.e., <img class="math" src="_images/math/7bb9e6000c409f7455fd0d9b0f8732673985a53e.png" alt="\delta_\mathbf{b}"/>; or <code class="docutils literal notranslate"><span class="pre">None</span></code> if <code class="docutils literal notranslate"><span class="pre">b</span></code> was
+passed as <code class="docutils literal notranslate"><span class="pre">None</span></code> to the <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Gradients for input tensors are only computed if their keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+returned for the corresponding Tensor.</p>
+</div>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.backprop_functions.LinearFunction.forward">
+<em class="property">static </em><code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">A</em>, <em class="sig-param">W</em>, <em class="sig-param">b=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#LinearFunction.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.LinearFunction.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output of a linear layer.</p>
+<p>This method implements eq. <a class="reference internal" href="#equation-eq-mini-batch">(2)</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – A context. Should be used to store activations which are needed
+in the backward pass.</p></li>
+<li><p><strong>A</strong> – A mini-batch of input activations <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/>.</p></li>
+<li><p><strong>W</strong> – The weight matrix <img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/>.</p></li>
+<li><p><strong>b</strong> (<em>optional</em>) – The bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output activations <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/> as defined by eq.
+<a class="reference internal" href="#equation-eq-mini-batch">(2)</a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.backprop_functions.MSELossFunction">
+<em class="property">class </em><code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">MSELossFunction</code><a class="reference internal" href="_modules/lib/backprop_functions.html#MSELossFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.MSELossFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.function.Function</span></code></p>
+<p>Implementation of a mean-squared-error (MSE) loss.</p>
+<p>Assuming a set of input activations in form of a matrix
+<img class="math" src="_images/math/905a22c73108a47a9c8b8d54d632d1aba2f34603.png" alt="A \in \mathbb{R}^{B \times M}"/>, where <img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/> denotes the size of
+the mini-batch and <img class="math" src="_images/math/4abba779877abb276b98ccb2b4ba9bf2e41947ab.png" alt="M"/> the size of each sample. Additionally, this
+<code class="docutils literal notranslate"><span class="pre">Function</span></code> requires a set of target activations
+<img class="math" src="_images/math/7529c395a2b250d64f3b2d5757f27f436090228b.png" alt="T \in \mathbb{R}^{B \times M}"/>.</p>
+<p>This method computes</p>
+<div class="math">
+<p><img src="_images/math/3c87f836dd2e09c211d6832e1e1cf288104af04b.png" alt="\mathcal{L}(A, T) = \frac{1}{B} \sum_{b = 1}^B \frac{1}{2} \lVert
+A_{b,:} - T_{b,:} \rVert^2"/></p>
+</div><p>where <img class="math" src="_images/math/20acc4bb190e2115d66283553191a4c3510f35c2.png" alt="A_{b,:}"/> denotes the <img class="math" src="_images/math/68c7c8c65602677ab56cf7fd88002023f0edc575.png" alt="b"/>-th row of matrix <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/>.</p>
+<dl class="method">
+<dt id="lib.backprop_functions.MSELossFunction.backward">
+<em class="property">static </em><code class="sig-name descname">backward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">grad_L</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#MSELossFunction.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.MSELossFunction.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backpropagate gradients through MSE loss.</p>
+<p>The input <code class="docutils literal notranslate"><span class="pre">grad_L</span></code> is the derivative <img class="math" src="_images/math/b43a42500991336b05f32537cf40ff7854066943.png" alt="\delta_L"/> of the final
+global scalar loss with respect to the scalar output of the
+<a class="reference internal" href="#lib.backprop_functions.MSELossFunction.forward" title="lib.backprop_functions.MSELossFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method.
+If the <a class="reference internal" href="#lib.backprop_functions.MSELossFunction.forward" title="lib.backprop_functions.MSELossFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> is used to compute the final loss from which the
+backpropagation algorithm starts, then PyTorch will pass the value <code class="docutils literal notranslate"><span class="pre">1</span></code>
+for the parameter <code class="docutils literal notranslate"><span class="pre">grad_L</span></code>.</p>
+<p>As shown in the tutorial, the partial derivative <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/> can be
+computed via</p>
+<div class="math">
+<p><img src="_images/math/b1c12795bd4c6004f7f4a3c8569f7fc4f4ec27ff.png" alt="\delta_A = \frac{1}{B} (A - T)"/></p>
+</div><p>Hence, <img class="math" src="_images/math/4bbf3950c50bcf3cf9f0e7348d64e58cc95a606d.png" alt="\delta_T"/> can be computed analoguously.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunction.forward()</span></code></a>.</p></li>
+<li><p><strong>grad_A</strong> – The backpropagated error <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>grad_A</strong>: The derivative of the loss with respect to the input
+activations, i.e., <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>.</p></li>
+<li><p><strong>grad_T</strong>: The derivative of the loss with respect to the target
+activations, i.e., <img class="math" src="_images/math/4bbf3950c50bcf3cf9f0e7348d64e58cc95a606d.png" alt="\delta_T"/>.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Gradients for input tensors are only computed if their keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+returned for the corresponding Tensor.</p>
+</div>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.backprop_functions.MSELossFunction.forward">
+<em class="property">static </em><code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">A</em>, <em class="sig-param">T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#MSELossFunction.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.MSELossFunction.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the MSE loss between activations <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/> and targets
+<img class="math" src="_images/math/e8dea8254118f111b5fb20895b03528c17566f06.png" alt="T"/>: <img class="math" src="_images/math/d15f5f737e7f33663a721f2fd5b79aa4f6572554.png" alt="\mathcal{L}(A, T)"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunction.forward()</span></code></a>.</p></li>
+<li><p><strong>A</strong> – The input activations, i.e., the matrix <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/>.</p></li>
+<li><p><strong>T</strong> – <p>The target activations, i.e., the matrix <img class="math" src="_images/math/e8dea8254118f111b5fb20895b03528c17566f06.png" alt="T"/>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Normally, targets will be constant values, that we do not
+wish to backpropagate through (i.e., the keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> will be set to <code class="docutils literal notranslate"><span class="pre">False</span></code>). For reasons of
+generality, this <code class="docutils literal notranslate"><span class="pre">Function</span></code> will also allow the
+backpropagation through targets, the keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> of parameter <code class="docutils literal notranslate"><span class="pre">T</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</div>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A scalar loss value <code class="docutils literal notranslate"><span class="pre">L</span></code> denoting the computed MSE value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.backprop_functions.SigmoidFunction">
+<em class="property">class </em><code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">SigmoidFunction</code><a class="reference internal" href="_modules/lib/backprop_functions.html#SigmoidFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.SigmoidFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.function.Function</span></code></p>
+<p>Implementation of a sigmoid non-linearity.</p>
+<p>This <code class="docutils literal notranslate"><span class="pre">Function</span></code> applies a <a class="reference external" href="https://en.wikipedia.org/wiki/Sigmoid_function">sigmoid</a> function as non-linearity to a vector
+of activations <img class="math" src="_images/math/1aeb7365f0eb122e946e998ee0c27e893006b8a5.png" alt="\mathbf{z}"/> (e.g., the output of a linear layer
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunction</span></code></a>).</p>
+<p>This function (denoted by <img class="math" src="_images/math/7bb6b395eddb00d6067a6dcffbaef409eb4533d5.png" alt="\sigma(\cdot)"/>) operates element-wise when
+computing the output activations <img class="math" src="_images/math/ee06d542263974017a04fb2dc754e9708a8f749f.png" alt="\mathbf{a}"/>:</p>
+<div class="math">
+<p><img src="_images/math/064893580a9c35aa14a02538503926fee9ab7337.png" alt="\mathbf{a} = \sigma(\mathbf{z})"/></p>
+</div><p>Similarly to the notation used in the docstring of class
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunction</span></code></a>, we consider a mini-batch of input activations
+given as a matrix <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/> and denote the corresponding output activations
+by <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/>.</p>
+<p class="rubric">Example</p>
+<p>Consider the output activation <img class="math" src="_images/math/20dc2ad5395034de109344e48e14519a5c4fc946.png" alt="A^{(l-1)}"/> of layer <img class="math" src="_images/math/42fc270f003a760f2392a38461cce372666ed4eb.png" alt="l-1"/>.
+Assuming a linear layer with sigmoid non-linearity, the output
+activations <img class="math" src="_images/math/47e39c32eb14aad957a9a6249ef830976da2b598.png" alt="A^{(l)}"/> of layer <img class="math" src="_images/math/470aa65888a2971c9346e573f12b37ea406b8ec9.png" alt="l"/> are computed as</p>
+<div class="math">
+<p><img src="_images/math/8f6eee6867b6235f602749117272ab56dd29a3d0.png" alt="A^{(l)} = \sigma(Z^{(l)}) = \sigma(A^{(l-1)} W^{(l), T} + b^{(l)})"/></p>
+</div><dl class="method">
+<dt id="lib.backprop_functions.SigmoidFunction.backward">
+<em class="property">static </em><code class="sig-name descname">backward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">grad_A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#SigmoidFunction.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.SigmoidFunction.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backpropagate gradients through sigmoid-nonlinearity.</p>
+<p>In this method, we compute the backprop-error <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/> given the
+error <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>, which is the derivative of the global scalar
+loss with respect to the output of the <a class="reference internal" href="#lib.backprop_functions.SigmoidFunction.forward" title="lib.backprop_functions.SigmoidFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method.</p>
+<p>As shown in the tutorial, this partial derivative can be computed as
+follows:</p>
+<div class="math">
+<p><img src="_images/math/be0b75669445b80008c5b532825fbc4543a7c1c1.png" alt="\delta_Z = \delta_A \odot \sigma^{'}(Z)"/></p>
+</div><p>where the function <img class="math" src="_images/math/eab7377cf26bcdebd28c292424ec17786c02e5d7.png" alt="\sigma^{'}(\cdot)"/> applies the derivative of
+the sigmoid non-linearity element-wise to its input tensor. The operator
+<img class="math" src="_images/math/71ff8bbe0f5610faa3e806593352782751e56e59.png" alt="\odot"/> denotes the <a class="reference external" href="https://en.wikipedia.org/wiki/Hadamard_product_(matrices)">Hadamard</a> product (element-wise product).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunction.forward()</span></code></a>.</p></li>
+<li><p><strong>grad_A</strong> – The backpropagated error <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>The derivative of the loss with respect to the input activations
+<img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/>, i.e., <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Gradients for input tensors are only computed if their keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+returned for the corresponding Tensor.</p>
+</div>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.backprop_functions.SigmoidFunction.forward">
+<em class="property">static </em><code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#SigmoidFunction.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.SigmoidFunction.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies the sigmoid function element-wise to <code class="docutils literal notranslate"><span class="pre">Z</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunction.forward()</span></code></a>.</p></li>
+<li><p><strong>Z</strong> – The input activations to this non-linearity, i.e., the matrix
+<img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output activations <img class="math" src="_images/math/51a125ef58924b1aabc01dd89d78ad3761eb334c.png" alt="A = \sigma(Z)"/>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.backprop_functions.linear_function">
+<code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">linear_function</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">W</em>, <em class="sig-param">b=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/backprop_functions.html#linear_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.backprop_functions.linear_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunction</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of method <a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunction.forward()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.backprop_functions.mse_loss">
+<code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">mse_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#lib.backprop_functions.mse_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.MSELossFunction" title="lib.backprop_functions.MSELossFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">MSELossFunction</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.backprop_functions.sigmoid_function">
+<code class="sig-prename descclassname">lib.backprop_functions.</code><code class="sig-name descname">sigmoid_function</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#lib.backprop_functions.sigmoid_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>An alias for using class <a class="reference internal" href="#lib.backprop_functions.SigmoidFunction" title="lib.backprop_functions.SigmoidFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">SigmoidFunction</span></code></a>.</p>
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.feedback_alignment_functions"></span><div class="section" id="adding-custom-functions-for-feedback-alignment-to-pytorch-s-autograd">
+<h2><a class="toc-backref" href="#id7">Adding custom functions for feedback alignment to PyTorch’s autograd</a><a class="headerlink" href="#adding-custom-functions-for-feedback-alignment-to-pytorch-s-autograd" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The forward and backward functions for a linear layer, sigmoid layer
+and MSE loss were already implemented in tutorial 2.1. In this tutorial,
+we will make a new class for a linear layer that applies feedback alignment
+for its backward function. Most of the code for the forward and backward
+function of the normal linear layer can be reused.</p>
+</div>
+<p>The module <code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.feedback_alingment_functions</span></code> contains custom
+implementations of the linear layers used in the neural network,
+that are compatible with PyTorch its <a class="reference external" href="https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html">autograd</a> package.</p>
+<p>Please checkout the corresponding documentation of class
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.LinearFunctionFA</span></code></a></p></td>
+<td><p>Implementation of a fully-connected layer w/o activation function that will use feedback alignment (FA) as a training method.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.feedback_alignment_functions.linear_function_fa" title="lib.feedback_alignment_functions.linear_function_fa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.linear_function_fa</span></code></a>(A, W, B)</p></td>
+<td><p>An alias for using class <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunctionFA</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.feedback_alignment_functions.LinearFunctionFA">
+<em class="property">class </em><code class="sig-prename descclassname">lib.feedback_alignment_functions.</code><code class="sig-name descname">LinearFunctionFA</code><a class="reference internal" href="_modules/lib/feedback_alignment_functions.html#LinearFunctionFA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.function.Function</span></code></p>
+<p>Implementation of a fully-connected layer w/o activation function that
+will use feedback alignment (FA) as a training method.</p>
+<p>This class is a <code class="docutils literal notranslate"><span class="pre">Function</span></code> that behaves similar to PyTorch’s class
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>, but it has a different backward function that
+implements FA. Since this class implements the interface
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>, we can use it to specify a custom
+backpropagation behavior.</p>
+<p>Assuming column vectors: layer input <img class="math" src="_images/math/76a7ef556c29ca69bfa914686b1019d12a09f3a8.png" alt="\mathbf{a} \in \mathbb{R}^M"/>,
+bias vector <img class="math" src="_images/math/3ecb2f0a9ce0de89e62716e6e0253e040bacda0d.png" alt="\mathbf{b} \in \mathbb{R}^N"/> and a weight matrix
+<img class="math" src="_images/math/53cac5cfba90a3a4521c5900779d18bca32a3017.png" alt="W \in \mathbb{R}^{N \times M}"/>, this layer simply computes</p>
+<div class="math" id="equation-eq-single-sample-fa">
+<p><span class="eqno">(3)<a class="headerlink" href="#equation-eq-single-sample-fa" title="Permalink to this equation">¶</a></span><img src="_images/math/5470ced866b39977f17648c0a5d6b57c50fcfd78.png" alt="\mathbf{z} = W \mathbf{a} + \mathbf{b}"/></p>
+</div><p>(or <img class="math" src="_images/math/5d7ef7cfcb6e0263cbfe0334d45c22bdc066ab52.png" alt="\mathbf{z} = W \mathbf{a}"/> if <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> is <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
+<p>Note, since we want to process mini-batches (containing <img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/> samples
+each), the input to the <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method is actually a set of samples
+<img class="math" src="_images/math/ee06d542263974017a04fb2dc754e9708a8f749f.png" alt="\mathbf{a}"/> collected into a matrix
+<img class="math" src="_images/math/905a22c73108a47a9c8b8d54d632d1aba2f34603.png" alt="A \in \mathbb{R}^{B \times M}"/>.</p>
+<p>We additionally introduce the matrix
+<img class="math" src="_images/math/0b38acaf0dd4575346fa9c050906864838c1251e.png" alt="\tilde{B} \in \mathbb{R}^{B \times N}"/> which simply contains copies
+of the bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> in its rows.</p>
+<p>The mathematical operation described for single samples in eq.
+<a class="reference internal" href="#equation-eq-single-sample-fa">(3)</a>, is stated for a the case of mini-batches below</p>
+<div class="math" id="equation-eq-mini-batch-fa">
+<p><span class="eqno">(4)<a class="headerlink" href="#equation-eq-mini-batch-fa" title="Permalink to this equation">¶</a></span><img src="_images/math/1444f455f1be3c8c40afb115f02319739137096a.png" alt="Z = A W^T + \tilde{B}"/></p>
+</div><p>where <img class="math" src="_images/math/04fe8b412b9f8aa0722605a53f7ae69e7ea94e38.png" alt="Z \in \mathbb{R}^{B \times N}"/> is the output matrix.</p>
+<dl class="method">
+<dt id="lib.feedback_alignment_functions.LinearFunctionFA.backward">
+<em class="property">static </em><code class="sig-name descname">backward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">grad_Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/feedback_alignment_functions.html#LinearFunctionFA.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.feedback_alignment_functions.LinearFunctionFA.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>propagate the error signals for <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/> through this linear layer,
+according to the feedback alignment method.</p>
+<p>The matrix <code class="docutils literal notranslate"><span class="pre">grad_Z</span></code>, which we denote by
+<img class="math" src="_images/math/4b23c2ee60e00adaa1d48db1cddfdfc2ca2b3c0d.png" alt="\delta_Z \in \mathbb{R}^{B \times N}"/>, contains the error signals
+of the scalar loss function with respect to each element
+from the <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> output matrix <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/>, propagated by
+feedback alignment.</p>
+<p>This method propagates the global error (encoded in
+<img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>) to all input tensors of the <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method,
+essentially computing <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>, <img class="math" src="_images/math/9b05767c67d84c42c030011d1a3cb2870ec8e99d.png" alt="\delta_W"/>,
+<img class="math" src="_images/math/7bb9e6000c409f7455fd0d9b0f8732673985a53e.png" alt="\delta_\mathbf{b}"/>.</p>
+<p>As shown in the tutorial, these partial derivatives can be computed as
+follows:</p>
+<div class="math">
+<p><img src="_images/math/bcf3d4f27440ba87948ddc2518cd070c9eb5bfce.png" alt="\delta_A &amp;= \delta_Z B^T \\
+\delta_W &amp;= \delta_Z^T A \\
+\delta_\mathbf{b} &amp;= \sum_{b=1}^B \delta_{Z_{b,:}}"/></p>
+</div><p>where <img class="math" src="_images/math/960faea30dd56ccf9a18b07a58e8a81f7cd60ac4.png" alt="\delta_{Z_{b,:}}"/> denotes the vector retrieved from the
+<img class="math" src="_images/math/68c7c8c65602677ab56cf7fd88002023f0edc575.png" alt="b"/>-th row of <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">ctx</span></code> of method <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a>.</p></li>
+<li><p><strong>grad_Z</strong> – The propagated error <img class="math" src="_images/math/df6d8b87a81df9c87eec08cb28c85b7fd9516d61.png" alt="\delta_Z"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>grad_A</strong>: The propagated error signal according to</dt><dd><p>feedback alignment, i.e., <img class="math" src="_images/math/e181daac991331622fc92f73422aad2fa21228a8.png" alt="\delta_A"/>.</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>grad_W</strong>: The direction for the weight update
+, i.e., <img class="math" src="_images/math/9b05767c67d84c42c030011d1a3cb2870ec8e99d.png" alt="\delta_W"/>.</p></li>
+<li><dl class="simple">
+<dt><strong>grad_B</strong>: This output will always be <code class="docutils literal notranslate"><span class="pre">None</span></code>, but needs to be</dt><dd><p>there for complying with the Pytorch framework.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>grad_b</strong>: The direction for the bias update</dt><dd><p>i.e., <img class="math" src="_images/math/7bb9e6000c409f7455fd0d9b0f8732673985a53e.png" alt="\delta_\mathbf{b}"/>; or <code class="docutils literal notranslate"><span class="pre">None</span></code> if <code class="docutils literal notranslate"><span class="pre">b</span></code> was
+passed as <code class="docutils literal notranslate"><span class="pre">None</span></code> to the <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Error signals/update directions for input tensors
+are only computed if their keyword
+<code class="docutils literal notranslate"><span class="pre">requires_grad</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+returned for the corresponding Tensor.</p>
+</div>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.feedback_alignment_functions.LinearFunctionFA.forward">
+<em class="property">static </em><code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">A</em>, <em class="sig-param">W</em>, <em class="sig-param">B</em>, <em class="sig-param">b=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/feedback_alignment_functions.html#LinearFunctionFA.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output of a linear layer.</p>
+<p>This method implements eq. <a class="reference internal" href="#equation-eq-mini-batch-fa">(4)</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – A context. Should be used to store activations which are needed
+in the backward pass.</p></li>
+<li><p><strong>A</strong> – A mini-batch of input activations <img class="math" src="_images/math/211284f68205c3e66773eaf026f32a0acdd3dfb3.png" alt="A"/>.</p></li>
+<li><p><strong>W</strong> – The weight matrix <img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/>.</p></li>
+<li><p><strong>B</strong> – The random feedback weight matrix <img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/>. This matrix is not
+used in the forward pass, but will be saved in ctx for the
+backward pass. Note that <img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/> needs to have the same
+dimensions as <img class="math" src="_images/math/0d2f390de908d6dc85a20ee908de51107df512d8.png" alt="W^T"/></p></li>
+<li><p><strong>b</strong> (<em>optional</em>) – The bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output activations <img class="math" src="_images/math/95f028ab2b20b895fa12d986e0d9f40f7b6e52d3.png" alt="Z"/> as defined by eq.
+<a class="reference internal" href="#equation-eq-mini-batch-fa">(4)</a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.feedback_alignment_functions.linear_function_fa">
+<code class="sig-prename descclassname">lib.feedback_alignment_functions.</code><code class="sig-name descname">linear_function_fa</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">W</em>, <em class="sig-param">B</em>, <em class="sig-param">b=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/feedback_alignment_functions.html#linear_function_fa"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.feedback_alignment_functions.linear_function_fa" title="Permalink to this definition">¶</a></dt>
+<dd><p>An alias for using class <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearFunctionFA</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of method <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA.forward" title="lib.feedback_alignment_functions.LinearFunctionFA.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">LinearFunctionFA.forward()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.linear_layer"></span><div class="section" id="a-linear-layer-module-that-maintains-its-own-parameters">
+<h2><a class="toc-backref" href="#id8">A linear layer module that maintains its own parameters</a><a class="headerlink" href="#a-linear-layer-module-that-maintains-its-own-parameters" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.linear_layer" title="lib.linear_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.linear_layer</span></code></a> contains our own implementation of the
+PyTorch class <a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>. The goal is to utilize the custom
+<code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module <a class="reference internal" href="#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a> (in
+particular, the <code class="docutils literal notranslate"><span class="pre">Function</span></code> <a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code></a>)
+and to provide a wrapper that takes care of managing the parameters
+(<img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> and <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/>) of such a linear layer.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PyTorch its <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a> interface is stateless.
+Therefore, the wrapper provided in this module is necessary in order to
+obtain a convinient interface for linear layers, such that the user doesn’t
+have to maintain the parameters manually.</p>
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.linear_layer.LinearLayer" title="lib.linear_layer.LinearLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.linear_layer.LinearLayer</span></code></a>(in_features, …)</p></td>
+<td><p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code> <a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.linear_layer.LinearLayer">
+<em class="property">class </em><code class="sig-prename descclassname">lib.linear_layer.</code><code class="sig-name descname">LinearLayer</code><span class="sig-paren">(</span><em class="sig-param">in_features</em>, <em class="sig-param">out_features</em>, <em class="sig-param">bias=True</em>, <em class="sig-param">gain=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer.html#LinearLayer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer.LinearLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code> <a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code></a>.</p>
+<p>The interface is inspired by the implementation of class
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>.</p>
+<dl class="attribute">
+<dt id="lib.linear_layer.LinearLayer.weights">
+<code class="sig-name descname">weights</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>The weight matrix <img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> of the layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.linear_layer.LinearLayer.bias">
+<code class="sig-name descname">bias</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>The bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> of the
+layer. Attribute is <code class="docutils literal notranslate"><span class="pre">None</span></code> if argument <code class="docutils literal notranslate"><span class="pre">bias</span></code> was passed as
+<code class="docutils literal notranslate"><span class="pre">None</span></code> in the constructor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Size of each input sample.</p></li>
+<li><p><strong>out_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Size of each output sample.</p></li>
+<li><p><strong>bias</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the layer will not learn an additive
+bias.</p></li>
+<li><p><strong>gain</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – A scaling term used for initializing the forward weights.
+Default 1.0.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.activation">
+<em class="property">property </em><code class="sig-name descname">activation</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.activation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer.LinearLayer.activation" title="lib.linear_layer.LinearLayer.activation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">activation</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">bias</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer.LinearLayer.bias" title="lib.linear_layer.LinearLayer.bias"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bias</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer.html#LinearLayer.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer.LinearLayer.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output activation of a linear layer.</p>
+<p>This method simply applies the
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction" title="lib.backprop_functions.LinearFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code></a> <code class="docutils literal notranslate"><span class="pre">Function</span></code> using the
+internally maintained weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">A</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code></a>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See return value of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">weights</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer.LinearLayer.weights" title="lib.linear_layer.LinearLayer.weights"><code class="xref py py-attr docutils literal notranslate"><span class="pre">weights</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.linear_layer_fa"></span><div class="section" id="a-linear-layer-module-for-fa-that-maintains-its-own-parameters">
+<h2><a class="toc-backref" href="#id9">A linear layer module for FA that maintains its own parameters</a><a class="headerlink" href="#a-linear-layer-module-for-fa-that-maintains-its-own-parameters" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.linear_layer_fa" title="lib.linear_layer_fa"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.linear_layer_fa</span></code></a> contains our own implementation of the
+PyTorch class <a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a> with a modified backwards function that
+implements feedback alignment (FA). The goal is to utilize the custom
+<code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module <a class="reference internal" href="#module-lib.feedback_alignment_functions" title="lib.feedback_alignment_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions</span></code></a> (in
+particular, the <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.LinearFunctionFA</span></code></a>)
+and to provide a wrapper that takes care of managing the parameters
+(<img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> and <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/>) of such a linear layer.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PyTorch its <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a> interface is stateless.
+Therefore, the wrapper provided in this module is necessary in order to
+obtain a convenient interface for linear layers, such that the user doesn’t
+have to maintain the parameters manually.</p>
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.linear_layer_fa.LinearLayerFA" title="lib.linear_layer_fa.LinearLayerFA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.linear_layer_fa.LinearLayerFA</span></code></a>(…[, …])</p></td>
+<td><p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code> <a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.LinearFunctionFA</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.linear_layer_fa.LinearLayerFA">
+<em class="property">class </em><code class="sig-prename descclassname">lib.linear_layer_fa.</code><code class="sig-name descname">LinearLayerFA</code><span class="sig-paren">(</span><em class="sig-param">in_features</em>, <em class="sig-param">out_features</em>, <em class="sig-param">bias=True</em>, <em class="sig-param">gain=0.01</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer_fa.html#LinearLayerFA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer_fa.LinearLayerFA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.LinearFunctionFA</span></code></a>.</p>
+<p>The interface is inspired by the implementation of class
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>.</p>
+<dl class="attribute">
+<dt id="lib.linear_layer_fa.LinearLayerFA.weights">
+<code class="sig-name descname">weights</code><a class="headerlink" href="#lib.linear_layer_fa.LinearLayerFA.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>The weight matrix <img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> of the layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.linear_layer_fa.LinearLayerFA.bias">
+<code class="sig-name descname">bias</code><a class="headerlink" href="#lib.linear_layer_fa.LinearLayerFA.bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>The bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> of the
+layer. Attribute is <code class="docutils literal notranslate"><span class="pre">None</span></code> if argument <code class="docutils literal notranslate"><span class="pre">bias</span></code> was passed as
+<code class="docutils literal notranslate"><span class="pre">None</span></code> in the constructor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.linear_layer_fa.LinearLayerFA.feedbackweights">
+<code class="sig-name descname">feedbackweights</code><a class="headerlink" href="#lib.linear_layer_fa.LinearLayerFA.feedbackweights" title="Permalink to this definition">¶</a></dt>
+<dd><p>The random feedback weight matrix
+<img class="math" src="_images/math/4bc3e94a67870b41b7c20179693e889251e2c136.png" alt="B"/> of the layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Size of each input sample.</p></li>
+<li><p><strong>out_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Size of each output sample.</p></li>
+<li><p><strong>bias</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the layer will not learn an additive
+bias.</p></li>
+<li><p><strong>gain</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – A scaling term used for initializing the forward weights.
+Default 0.01.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">bias</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer_fa.LinearLayerFA.bias" title="lib.linear_layer_fa.LinearLayerFA.bias"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bias</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">feedbackweights</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer_fa.LinearLayerFA.feedbackweights" title="lib.linear_layer_fa.LinearLayerFA.feedbackweights"><code class="xref py py-attr docutils literal notranslate"><span class="pre">feedbackweights</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer_fa.LinearLayerFA.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer_fa.html#LinearLayerFA.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer_fa.LinearLayerFA.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output activation of a linear layer.</p>
+<p>This method simply applies the
+<a class="reference internal" href="#lib.feedback_alignment_functions.LinearFunctionFA" title="lib.feedback_alignment_functions.LinearFunctionFA"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.feedback_alignment_functions.LinearFunctionFA</span></code></a>
+<code class="docutils literal notranslate"><span class="pre">Function</span></code> using the internally maintained weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">A</span></code> of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code></a>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See return value of method
+<a class="reference internal" href="#lib.backprop_functions.LinearFunction.forward" title="lib.backprop_functions.LinearFunction.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">weights</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer_fa.LinearLayerFA.weights" title="lib.linear_layer_fa.LinearLayerFA.weights"><code class="xref py py-attr docutils literal notranslate"><span class="pre">weights</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.mlp"></span><div class="section" id="implementation-of-a-multi-layer-perceptron-mlp">
+<h2><a class="toc-backref" href="#id10">Implementation of a Multi-layer Perceptron (MLP)</a><a class="headerlink" href="#implementation-of-a-multi-layer-perceptron-mlp" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.mlp" title="lib.mlp"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.mlp</span></code></a> implements a simple fully-connected neural network,
+a so called multi-layer perceptron (MLP).</p>
+<p>Internally, it will make use of <code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module
+<a class="reference internal" href="#module-lib.backprop_functions" title="lib.backprop_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code></a> to realize fully-connected linear layers and
+sigmoid activation functions.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a>([n_in, n_out, n_hidden, fa, …])</p></td>
+<td><p>Implementation of a fully-connected neural network with sigmoid non- linearities as activation functions after all hidden layers.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.mlp.MLP">
+<em class="property">class </em><code class="sig-prename descclassname">lib.mlp.</code><code class="sig-name descname">MLP</code><span class="sig-paren">(</span><em class="sig-param">n_in=1, n_out=1, n_hidden=[10], fa=False, linear=False, gain=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/mlp.html#MLP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.mlp.MLP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Implementation of a fully-connected neural network with sigmoid non-
+linearities as activation functions after all hidden layers.</p>
+<dl class="attribute">
+<dt id="lib.mlp.MLP.depth">
+<code class="sig-name descname">depth</code><a class="headerlink" href="#lib.mlp.MLP.depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of hidden layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.mlp.MLP.fa">
+<code class="sig-name descname">fa</code><a class="headerlink" href="#lib.mlp.MLP.fa" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if feedback alignment should be used to train the
+network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.mlp.MLP.linear">
+<code class="sig-name descname">linear</code><a class="headerlink" href="#lib.mlp.MLP.linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if the network should be linear (no sigmoid
+nonlinearities).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.mlp.MLP.linear_layers">
+<code class="sig-name descname">linear_layers</code><a class="headerlink" href="#lib.mlp.MLP.linear_layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list containing the linear layers of
+the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>nn.ModuleList</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Network input size.</p></li>
+<li><p><strong>n_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Network output size.</p></li>
+<li><p><strong>n_hidden</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Size of each hidden layer of the network. This
+argument implicitly defines the <a class="reference internal" href="#lib.mlp.MLP.depth" title="lib.mlp.MLP.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a> of the network.</p></li>
+<li><p><strong>fa</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – True if feedback alignment should be used to train the
+network.</p></li>
+<li><p><strong>linear</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – True if the network should be linear (no sigmoid
+nonlinearities).</p></li>
+<li><p><strong>gain</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – A scaling term used for initializing the forward weights
+of the network. Default 1.0.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">depth</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.depth" title="lib.mlp.MLP.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">fa</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.fa" title="lib.mlp.MLP.fa"><code class="xref py py-attr docutils literal notranslate"><span class="pre">fa</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.mlp.MLP.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/mlp.html#MLP.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.mlp.MLP.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output <img class="math" src="_images/math/1b5e577d6216dca3af7d87aa122a0b9b360d6cb3.png" alt="y"/> of the network.</p>
+<p>After every linear hidden layer a sigmoid nonlinearity will be applied
+if the <a class="reference internal" href="#lib.mlp.MLP.linear" title="lib.mlp.MLP.linear"><code class="xref py py-attr docutils literal notranslate"><span class="pre">linear</span></code></a> is not <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The output of the network will be linear, i.e., no activation
+function is applied to the linear layer that connects the last
+hidden layer with the output layer.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – The input to the network.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output <code class="docutils literal notranslate"><span class="pre">y</span></code> of the network.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">linear</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.fa" title="lib.mlp.MLP.fa"><code class="xref py py-attr docutils literal notranslate"><span class="pre">fa</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">linear_layers</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.linear_layers" title="lib.mlp.MLP.linear_layers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">linear_layers</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.utils"></span><div class="section" id="a-collection-of-helper-functions">
+<h2><a class="toc-backref" href="#id11">A collection of helper functions</a><a class="headerlink" href="#a-collection-of-helper-functions" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a> contains several general purpose utilities and
+helper functions.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.regression_cubic_poly" title="lib.utils.regression_cubic_poly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.regression_cubic_poly</span></code></a>([num_train, …])</p></td>
+<td><p>Generate a dataset for a 1D regression task with a cubic polynomial.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.generate_data_from_teacher" title="lib.utils.generate_data_from_teacher"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.generate_data_from_teacher</span></code></a>([…])</p></td>
+<td><p>Generate data for a regression task through a teacher model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.RegressionDataset" title="lib.utils.RegressionDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.RegressionDataset</span></code></a>(inputs, outputs)</p></td>
+<td><p>A simple regression dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.plot_predictions" title="lib.utils.plot_predictions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.plot_predictions</span></code></a>(device, …)</p></td>
+<td><p>Plot the predictions of 1D regression tasks.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.compute_matrix_angle" title="lib.utils.compute_matrix_angle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.compute_matrix_angle</span></code></a>(C, D)</p></td>
+<td><p>Compute the angle between the two given matrices in degrees.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.plot_angles" title="lib.utils.plot_angles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.plot_angles</span></code></a>(angle_tensor, title, …)</p></td>
+<td><p>Show a plot of the trajectory of the angle between two matrices in function of time.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.utils.RegressionDataset">
+<em class="property">class </em><code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">RegressionDataset</code><span class="sig-paren">(</span><em class="sig-param">inputs</em>, <em class="sig-param">outputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#RegressionDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.RegressionDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.Dataset</span></code></p>
+<p>A simple regression dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – The input samples.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – The output samples.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.compute_matrix_angle">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">compute_matrix_angle</code><span class="sig-paren">(</span><em class="sig-param">C</em>, <em class="sig-param">D</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#compute_matrix_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.compute_matrix_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the angle between the two given matrices in degrees.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>C</strong> – The first matrix.</p></li>
+<li><p><strong>D</strong> – The second matrix (must be of the same size as C).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The angle in degrees between the two given matrices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.generate_data_from_teacher">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">generate_data_from_teacher</code><span class="sig-paren">(</span><em class="sig-param">num_train=1000, num_test=100, n_in=5, n_out=5, n_hidden=[10, 10, 10], linear=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#generate_data_from_teacher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.generate_data_from_teacher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate data for a regression task through a teacher model.</p>
+<p>This function generates random input patterns and creates a random MLP
+(fully-connected neural network), that is used as a teacher model. I.e., the
+generated input data is fed through the teacher model to produce target
+outputs. The so produced dataset can be used to train and assess a
+student model. Hence, a learning procedure can be verified by validating its
+capability of training a student network to mimic a given teacher network.</p>
+<p>Input samples will be uniformly drawn from a unit cube.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Since this is a synthetic dataset that uses random number generators,
+the generated dataset depends on externally configured random seeds
+(and in case of GPU computation, it also depends on whether CUDA
+operations are performed in a derterministic mode).</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_train</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of training samples.</p></li>
+<li><p><strong>num_test</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of test samples.</p></li>
+<li><p><strong>n_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Passed as argument <code class="docutils literal notranslate"><span class="pre">n_in</span></code> to class <a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a>
+when building the teacher model.</p></li>
+<li><p><strong>n_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Passed as argument <code class="docutils literal notranslate"><span class="pre">n_out</span></code> to class <a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a>
+when building the teacher model.</p></li>
+<li><p><strong>n_hidden</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Passed as argument <code class="docutils literal notranslate"><span class="pre">n_hidden</span></code> to class
+<a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a> when building the teacher model.</p></li>
+<li><p><strong>linear</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – Passed as argument <code class="docutils literal notranslate"><span class="pre">linear</span></code> to
+class <a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a> when building the teacher model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See return values of function <a class="reference internal" href="#lib.utils.regression_cubic_poly" title="lib.utils.regression_cubic_poly"><code class="xref py py-func docutils literal notranslate"><span class="pre">regression_cubic_poly()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.plot_angles">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">plot_angles</code><span class="sig-paren">(</span><em class="sig-param">angle_tensor</em>, <em class="sig-param">title</em>, <em class="sig-param">ylabel</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#plot_angles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.plot_angles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show a plot of the trajectory of the angle between two matrices
+in function of time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>angle_tensor</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+a37be20 ))"><em>torch.Tensor</em></a>) – A tensor containing the angles for
+each layer per epoch.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The title of the figure.</p></li>
+<li><p><strong>ylabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – The lable for the y-axis of the figure.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.plot_predictions">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">plot_predictions</code><span class="sig-paren">(</span><em class="sig-param">device</em>, <em class="sig-param">test_loader</em>, <em class="sig-param">net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#plot_predictions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.plot_predictions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the predictions of 1D regression tasks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#main.test" title="main.test"><code class="xref py py-func docutils literal notranslate"><span class="pre">main.test()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.regression_cubic_poly">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">regression_cubic_poly</code><span class="sig-paren">(</span><em class="sig-param">num_train=20</em>, <em class="sig-param">num_test=100</em>, <em class="sig-param">train_domain=(-4</em>, <em class="sig-param">-4)</em>, <em class="sig-param">test_domain=(-4</em>, <em class="sig-param">4)</em>, <em class="sig-param">rseed=42</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#regression_cubic_poly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.regression_cubic_poly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a dataset for a 1D regression task with a cubic polynomial.</p>
+<p>The regression task modelled here is <img class="math" src="_images/math/fb106123d4c721c5b15d5ec6edf2ab4d3b31bbdf.png" alt="y = x^3 + \epsilon"/>,
+where <img class="math" src="_images/math/209678d5255dca13fb997f3418d0c42d4e93cc9d.png" alt="\epsilon \sim \mathcal{N}(0, 9I)"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_train</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of training samples.</p></li>
+<li><p><strong>num_test</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of test samples.</p></li>
+<li><p><strong>train_domain</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Input domain for training samples.</p></li>
+<li><p><strong>test_domain</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Input domain for training samples.</p></li>
+<li><p><strong>rseed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – To ensure reproducibility, the random seed for the data
+generation should be decoupled from the random seed of the
+simulation. Therefore, a new <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.random.RandomState</span></code> is
+created for the purpose of generating the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>train_x</strong>: Generated training inputs.</p></li>
+<li><p><strong>test_x</strong>: Generated test inputs.</p></li>
+<li><p><strong>train_y</strong>: Generated training outputs.</p></li>
+<li><p><strong>test_y</strong>: Generated test outputs.</p></li>
+</ul>
+<p>Data is returned in form of 2D arrays of class <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tutorial 2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#controller-for-simulations">Controller for simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-custom-functions-to-pytorch-s-autograd">Adding custom functions to PyTorch’s autograd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-custom-functions-for-feedback-alignment-to-pytorch-s-autograd">Adding custom functions for feedback alignment to PyTorch’s autograd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-linear-layer-module-that-maintains-its-own-parameters">A linear layer module that maintains its own parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-linear-layer-module-for-fa-that-maintains-its-own-parameters">A linear layer module for FA that maintains its own parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-of-a-multi-layer-perceptron-mlp">Implementation of a Multi-layer Perceptron (MLP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-collection-of-helper-functions">A collection of helper functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Learning in deep artificial and biological neuronal networks</a></li>
+      <li>Next: <a href="tests.html" title="next chapter">Testing</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Christian Henning, Alexander Meulemans.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
