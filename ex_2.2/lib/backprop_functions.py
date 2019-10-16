@@ -107,10 +107,9 @@ class LinearFunction(Function):
         """
         ctx.save_for_backward(A, W, b)
 
-        raise NotImplementedError('TODO implement')
-        # Z = ...
+        Z = A.mm(W.t()) + b
 
-        # return Z
+        return Z
 
     @staticmethod
     def backward(ctx, grad_Z):
@@ -167,14 +166,13 @@ class LinearFunction(Function):
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            raise NotImplementedError('TODO implement')
-            # grad_A = ...
+            grad_A = grad_Z.mm(W)
+
         if ctx.needs_input_grad[1]:
-            raise NotImplementedError('TODO implement')
-            # grad_W = ...
+            grad_W = grad_Z.t().mm(A)
+
         if b is not None and ctx.needs_input_grad[2]:
-            raise NotImplementedError('TODO implement')
-            # grad_b = ...
+            grad_b = grad_Z.sum(0)
 
         return grad_A, grad_W, grad_b
 
@@ -237,10 +235,9 @@ class SigmoidFunction(Function):
         """
         ctx.save_for_backward(Z)
 
-        raise NotImplementedError('TODO implement')
-        # A = ...
+        A = 1 / (1 + torch.exp(-Z))
 
-        # return A
+        return A
 
     @staticmethod
     def backward(ctx, grad_A):
@@ -255,7 +252,8 @@ class SigmoidFunction(Function):
 
         .. math::
 
-            \delta_Z = \delta_A \odot \sigma^{'}(Z)
+            \delta_Z &= \delta_A \, \text{diag} \big( \sigma^{'}(Z) \big) \\
+            &= \delta_A \odot \sigma^{'}(Z)
 
         where the function :math:`\sigma^{'}(\cdot)` applies the derivative of
         the sigmoid non-linearity element-wise to its input tensor. The operator
@@ -284,8 +282,8 @@ class SigmoidFunction(Function):
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            raise NotImplementedError('TODO implement')
-            # grad_Z = ...
+            A = 1 / (1 + torch.exp(-Z))
+            grad_Z = grad_A * (A * (1 - A))
 
         return grad_Z
 
@@ -334,10 +332,11 @@ class MSELossFunction(Function):
         """
         ctx.save_for_backward(A, T)
 
-        raise NotImplementedError('TODO implement')
-        # L = ...
+        B = A.shape[0]
 
-        # return L
+        L = 1/(2*B) * ((A - T)**2).sum()
+
+        return L
 
     @staticmethod
     def backward(ctx, grad_L):
@@ -382,17 +381,17 @@ class MSELossFunction(Function):
         grad_A = None
         grad_T = None
 
+        B = A.shape[0]
+
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            raise NotImplementedError('TODO implement')
-            # grad_A = ...
+            grad_A = 1/B*(A - T)
 
         if ctx.needs_input_grad[1]:
-            raise NotImplementedError('TODO implement')
-            # grad_T = ...
+            grad_T = 1/B*(T - A)
 
-        # return grad_A, grad_T
+        return grad_A, grad_T
 
 mse_loss = MSELossFunction.apply
 """An alias for using class :class:`MSELossFunction`."""

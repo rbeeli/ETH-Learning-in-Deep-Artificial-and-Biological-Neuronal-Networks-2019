@@ -106,10 +106,9 @@ class LinearFunctionFA(Function):
         """
         ctx.save_for_backward(A, W, B, b)
 
-        raise NotImplementedError('TODO implement')
-       # Z = ...
+        Z = A.mm(W.t()) + b
 
-       # return Z
+        return Z
         # Solution inspired by:
         # https://pytorch.org/docs/master/notes/extending.html
 
@@ -174,14 +173,13 @@ class LinearFunctionFA(Function):
         # We only need to compute gradients for tensors that are flagged to
         # require gradients!
         if ctx.needs_input_grad[0]:
-            raise NotImplementedError('TODO implement')
-        # grad_A = ...
+            grad_A = grad_Z.mm(B.t())
+
         if ctx.needs_input_grad[1]:
-            raise NotImplementedError('TODO implement')
-        # grad_W = ...
-        if b is not None and ctx.needs_input_grad[2]:
-            raise NotImplementedError('TODO implement')
-        # grad_b = ...
+            grad_W = grad_Z.t().mm(A)
+
+        if b is not None and ctx.needs_input_grad[3]:
+            grad_b = grad_Z.sum(0)
 
         return grad_A, grad_W, grad_B, grad_b
 
