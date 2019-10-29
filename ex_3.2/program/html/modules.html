@@ -1,0 +1,616 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>API &#8212; Tutorial 3  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Learning in deep artificial and biological neuronal networks" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="api">
+<span id="api-reference-label"></span><h1><a class="toc-backref" href="#id1">API</a><a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#api" id="id1">API</a></p>
+<ul>
+<li><p><a class="reference internal" href="#controller-for-simulations" id="id2">Controller for simulations</a></p>
+<ul>
+<li><p><a class="reference internal" href="#d-polynomial-regression" id="id3">1D polynomial regression</a></p></li>
+<li><p><a class="reference internal" href="#maximum-likelihood" id="id4">Maximum likelihood</a></p></li>
+<li><p><a class="reference internal" href="#bayes-by-backprop" id="id5">Bayes-by-Backprop</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#a-linear-layer-module-that-maintains-its-own-parameters" id="id6">A linear layer module that maintains its own parameters</a></p></li>
+<li><p><a class="reference internal" href="#implementation-of-a-multi-layer-perceptron-mlp" id="id7">Implementation of a Multi-layer Perceptron (MLP)</a></p></li>
+<li><p><a class="reference internal" href="#a-collection-of-helper-functions" id="id8">A collection of helper functions</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>The API describes all functionalities implemented for this exercise.
+Of particular interest is the <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> script, which can be used to validate an implementation.</p>
+<p>The module <a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a> contains the missing functionalities that have to be implemented.
+You have to <strong>precisely follow the interface as described in section</strong> <a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a> when implementing the missing functionalities!</p>
+<span class="target" id="module-main"></span><div class="section" id="controller-for-simulations">
+<h2><a class="toc-backref" href="#id2">Controller for simulations</a><a class="headerlink" href="#controller-for-simulations" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> is an executable script that controls the simulations
+(i.e., the training of regression tasks).</p>
+<p>For more usage information, please check out</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python3 main --help
+</pre></div>
+</div>
+<p>There are is one dataset we want to train on:</p>
+<div class="section" id="d-polynomial-regression">
+<h3><a class="toc-backref" href="#id3">1D polynomial regression</a><a class="headerlink" href="#d-polynomial-regression" title="Permalink to this headline">¶</a></h3>
+<p>In case of 1D regression tasks, the result can be visualized to a human, who
+can assess the quality of the optimizer.</p>
+<p>An example 1D regression task can be retrieved using the function
+<a class="reference internal" href="#lib.utils.regression_cubic_poly" title="lib.utils.regression_cubic_poly"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.utils.regression_cubic_poly()</span></code></a>.</p>
+<p>In this exercise, we want to understand the difference between standart
+maximum likelihood and a bayesian treatment of learning. For the latter, we need
+to approximate the intractable weight posterior to do inference.
+First, we take a closer look at:</p>
+</div>
+<div class="section" id="maximum-likelihood">
+<h3><a class="toc-backref" href="#id4">Maximum likelihood</a><a class="headerlink" href="#maximum-likelihood" title="Permalink to this headline">¶</a></h3>
+<p>Juhuu!
+For this part, you don’t have to programm anything to make the script work.</p>
+<p>In the case of maximum likelihodd, we train a standart neural network
+with backpropagation to minimize a certain loss. We obtain one set of weights
+that supposedly solves the problem.</p>
+<p>To visualize and run the training, execute</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python3 main --show_plot
+</pre></div>
+</div>
+<p>This script can be used to train on this dataset via the option
+option.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python main.py --show_plot --data_random_seed <span class="m">753</span>
+</pre></div>
+</div>
+<p>Furthermore, you can train on this dataset also via the option
+<code class="docutils literal notranslate"><span class="pre">--random_seed</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python main.py --show_plot --random_seed <span class="m">656</span>
+</pre></div>
+</div>
+<p>These random seed options change the generation of the training data a little
+or how your initial weights, the training starting points, are determined.</p>
+<p>You can think of these random seeds, as specification how and when data was
+collected and in what state your algorithm was when we started training.
+(One could even imagine that the algorithm was already trained on another task.)</p>
+<p>Oberserve the difference when you change one/both of the seeds (753, 656 above)
+to other numbers and describe it and the possible shortcomings of
+maximum likelihood (TODO).</p>
+</div>
+<div class="section" id="bayes-by-backprop">
+<h3><a class="toc-backref" href="#id5">Bayes-by-Backprop</a><a class="headerlink" href="#bayes-by-backprop" title="Permalink to this headline">¶</a></h3>
+<p>In the case of bayes-by-Backprop, to run the training, execute</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python3 main --bbb
+</pre></div>
+</div>
+<p>Add to visualise <code class="docutils literal notranslate"><span class="pre">--random_seed</span></code>.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#main.run" title="main.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.run</span></code></a>()</p></td>
+<td><p>Run the script.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.train</span></code></a>(args, device, train_loader, net)</p></td>
+<td><p>Train the given network on the given (regression) dataset.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="main.run">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the script.</p>
+<ul class="simple">
+<li><p>Parsing command-line arguments</p></li>
+<li><p>Creating synthetic regression data</p></li>
+<li><p>Initiating training process</p></li>
+<li><p>Testing final network</p></li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.test">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">test</code><span class="sig-paren">(</span><em class="sig-param">device</em>, <em class="sig-param">test_loader</em>, <em class="sig-param">net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>test a train network by computing the MSE on the test set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-func docutils literal notranslate"><span class="pre">train()</span></code></a>.</p></li>
+<li><p><strong>test_loader</strong> (<a class="reference external" href="https://pytorch.org/docs/master/data.html#torch.utils.data.DataLoader" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))"><em>torch.utils.data.DataLoader</em></a>) – The data handler for
+test data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The mean-squared error for the test set <code class="docutils literal notranslate"><span class="pre">test_loader</span></code> when
+using the network <code class="docutils literal notranslate"><span class="pre">net</span></code>. Note, the <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<code class="xref py py-func docutils literal notranslate"><span class="pre">lib.backprop_functions.mse_loss()</span></code> is used to compute the MSE
+value.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.train">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">train</code><span class="sig-paren">(</span><em class="sig-param">args</em>, <em class="sig-param">device</em>, <em class="sig-param">train_loader</em>, <em class="sig-param">net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the given network on the given (regression) dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</p></li>
+<li><p><strong>device</strong> – The PyTorch device to be used.</p></li>
+<li><p><strong>train_loader</strong> (<a class="reference external" href="https://pytorch.org/docs/master/data.html#torch.utils.data.DataLoader" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))"><em>torch.utils.data.DataLoader</em></a>) – The data handler for
+training data.</p></li>
+<li><p><strong>net</strong> – The neural network.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<span class="target" id="module-lib.linear_layer"></span><div class="section" id="a-linear-layer-module-that-maintains-its-own-parameters">
+<h2><a class="toc-backref" href="#id6">A linear layer module that maintains its own parameters</a><a class="headerlink" href="#a-linear-layer-module-that-maintains-its-own-parameters" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.linear_layer" title="lib.linear_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.linear_layer</span></code></a> contains our own implementation of the
+PyTorch class <a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>. The goal is to utilize the custom
+<code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module <code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code> (in
+particular, the <code class="docutils literal notranslate"><span class="pre">Function</span></code> <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code>)
+and to provide a wrapper that takes care of managing the parameters
+(<img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> and <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/>) of such a linear layer.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PyTorch its <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a> interface is stateless.
+Therefore, the wrapper provided in this module is necessary in order to
+obtain a convinient interface for linear layers, such that the user doesn’t
+have to maintain the parameters manually.</p>
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.linear_layer.LinearLayer" title="lib.linear_layer.LinearLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.linear_layer.LinearLayer</span></code></a>(in_features, …)</p></td>
+<td><p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code> <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.linear_layer.LinearLayer">
+<em class="property">class </em><code class="sig-prename descclassname">lib.linear_layer.</code><code class="sig-name descname">LinearLayer</code><span class="sig-paren">(</span><em class="sig-param">in_features</em>, <em class="sig-param">out_features</em>, <em class="sig-param">bias=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer.html#LinearLayer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer.LinearLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Wrapper for <code class="docutils literal notranslate"><span class="pre">Function</span></code> <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code>.</p>
+<p>The interface is inspired by the implementation of class
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Linear" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code></a>.</p>
+<dl class="attribute">
+<dt id="lib.linear_layer.LinearLayer.weights">
+<code class="sig-name descname">weights</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>The weight matrix <img class="math" src="_images/math/1fbee781f84569077719a167b64e12064360fac1.png" alt="W"/> of the layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.linear_layer.LinearLayer.bias">
+<code class="sig-name descname">bias</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>The bias vector <img class="math" src="_images/math/8a01cab30456eeff111a6985d01f7935c84d2731.png" alt="\mathbf{b}"/> of the
+layer. Attribute is <code class="docutils literal notranslate"><span class="pre">None</span></code> if argument <code class="docutils literal notranslate"><span class="pre">bias</span></code> was passed as
+<code class="docutils literal notranslate"><span class="pre">None</span></code> in the constructor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+079b3cc ))">torch.nn.Parameter</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Size of each input sample.</p></li>
+<li><p><strong>out_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Size of each output sample.</p></li>
+<li><p><strong>bias</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the layer will not learn an additive
+bias.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.b_logvar">
+<em class="property">property </em><code class="sig-name descname">b_logvar</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.b_logvar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <code class="xref py py-attr docutils literal notranslate"><span class="pre">b_sigma</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.b_mu">
+<em class="property">property </em><code class="sig-name descname">b_mu</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.b_mu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer.LinearLayer.b_mu" title="lib.linear_layer.LinearLayer.b_mu"><code class="xref py py-attr docutils literal notranslate"><span class="pre">b_mu</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">bbb=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/linear_layer.html#LinearLayer.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.linear_layer.LinearLayer.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output activation of a linear layer.</p>
+<p>This method simply applies the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction</span></code> <code class="docutils literal notranslate"><span class="pre">Function</span></code> using the
+internally maintained weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – See description of argument <code class="docutils literal notranslate"><span class="pre">A</span></code> of method
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See return value of method
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.backprop_functions.LinearFunction.forward()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.w_logvar">
+<em class="property">property </em><code class="sig-name descname">w_logvar</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.w_logvar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <code class="xref py py-attr docutils literal notranslate"><span class="pre">w_sigma</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.linear_layer.LinearLayer.w_mu">
+<em class="property">property </em><code class="sig-name descname">w_mu</code><a class="headerlink" href="#lib.linear_layer.LinearLayer.w_mu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.linear_layer.LinearLayer.w_mu" title="lib.linear_layer.LinearLayer.w_mu"><code class="xref py py-attr docutils literal notranslate"><span class="pre">w_mu</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.mlp"></span><div class="section" id="implementation-of-a-multi-layer-perceptron-mlp">
+<h2><a class="toc-backref" href="#id7">Implementation of a Multi-layer Perceptron (MLP)</a><a class="headerlink" href="#implementation-of-a-multi-layer-perceptron-mlp" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.mlp" title="lib.mlp"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.mlp</span></code></a> implements a simple fully-connected neural network,
+a so called multi-layer perceptron (MLP).</p>
+<p>Internally, it will make use of <code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module
+<code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.backprop_functions</span></code> to realize fully-connected linear layers and
+sigmoid activation functions.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.mlp.MLP" title="lib.mlp.MLP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.mlp.MLP</span></code></a>([n_in, n_out, n_hidden])</p></td>
+<td><p>Implementation of a fully-connected neural network with sigmoid non- linearities as activation functions after all hidden layers.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.mlp.MLP">
+<em class="property">class </em><code class="sig-prename descclassname">lib.mlp.</code><code class="sig-name descname">MLP</code><span class="sig-paren">(</span><em class="sig-param">n_in=1, n_out=1, n_hidden=[10]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/mlp.html#MLP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.mlp.MLP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Implementation of a fully-connected neural network with sigmoid non-
+linearities as activation functions after all hidden layers.</p>
+<dl class="attribute">
+<dt id="lib.mlp.MLP.depth">
+<code class="sig-name descname">depth</code><a class="headerlink" href="#lib.mlp.MLP.depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of hidden layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Network input size.</p></li>
+<li><p><strong>n_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Network output size.</p></li>
+<li><p><strong>n_hidden</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – Size of each hidden layer of the network. This
+argument implicitly defines the <a class="reference internal" href="#lib.mlp.MLP.depth" title="lib.mlp.MLP.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a> of the network.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="lib.mlp.MLP.compute_kld">
+<code class="sig-name descname">compute_kld</code><span class="sig-paren">(</span><em class="sig-param">device</em>, <em class="sig-param">bias=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/mlp.html#MLP.compute_kld"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.mlp.MLP.compute_kld" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">depth</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.depth" title="lib.mlp.MLP.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.mlp.MLP.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">bbb=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/mlp.html#MLP.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.mlp.MLP.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the output <img class="math" src="_images/math/1b5e577d6216dca3af7d87aa122a0b9b360d6cb3.png" alt="y"/> of the network.</p>
+<p>After every linear hidden layer a sigmoid nonlinearity will be applied.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The output of the network will be linear, i.e., no activation
+function is applied to the linear layer that connects the last
+hidden layer with the output layer.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – The input to the network.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output <code class="docutils literal notranslate"><span class="pre">y</span></code> of the network.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.mlp.MLP.linear_layers">
+<em class="property">property </em><code class="sig-name descname">linear_layers</code><a class="headerlink" href="#lib.mlp.MLP.linear_layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.mlp.MLP.linear_layers" title="lib.mlp.MLP.linear_layers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">linear_layers</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.utils"></span><div class="section" id="a-collection-of-helper-functions">
+<h2><a class="toc-backref" href="#id8">A collection of helper functions</a><a class="headerlink" href="#a-collection-of-helper-functions" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a> contains several general purpose utilities and
+helper functions.</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.regression_cubic_poly" title="lib.utils.regression_cubic_poly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.regression_cubic_poly</span></code></a>([num_train, …])</p></td>
+<td><p>Generate a dataset for a 1D regression task with a cubic polynomial.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.RegressionDataset" title="lib.utils.RegressionDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.RegressionDataset</span></code></a>(inputs, outputs)</p></td>
+<td><p>A simple regression dataset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.plot_predictions" title="lib.utils.plot_predictions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.plot_predictions</span></code></a>(device, …)</p></td>
+<td><p>Plot the predictions of 1D regression tasks.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.sampleGaussian" title="lib.utils.sampleGaussian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.sampleGaussian</span></code></a>(mu, logvar)</p></td>
+<td><p>Get one sample from a Gaussian using the reparametrization trick.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lib.utils.computeELBO" title="lib.utils.computeELBO"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.computeELBO</span></code></a>(net, predictions, …)</p></td>
+<td><p>Computes the ELBO (Evidence lower bound).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lib.utils.computeKLD" title="lib.utils.computeKLD"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.computeKLD</span></code></a>(mean_a_flat, …[, …])</p></td>
+<td><p>Compute the kullback-leibler divergence between two Gaussians.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.utils.RegressionDataset">
+<em class="property">class </em><code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">RegressionDataset</code><span class="sig-paren">(</span><em class="sig-param">inputs</em>, <em class="sig-param">outputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#RegressionDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.RegressionDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.Dataset</span></code></p>
+<p>A simple regression dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – The input samples.</p></li>
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – The output samples.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.computeELBO">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">computeELBO</code><span class="sig-paren">(</span><em class="sig-param">net</em>, <em class="sig-param">predictions</em>, <em class="sig-param">targets</em>, <em class="sig-param">device</em>, <em class="sig-param">args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#computeELBO"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.computeELBO" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the ELBO (Evidence lower bound).</p>
+<p>Computes the negative log likelihood (nll) and Kullback-Leibler divergence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net</strong> – The neural network.</p></li>
+<li><p><strong>predictions</strong> – Predictions from the neural network.</p></li>
+<li><p><strong>targets</strong> – Tragets for the predictions of the neural network.</p></li>
+<li><p><strong>device</strong> – The PyTorch device to be used.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The negative log likelihood and the KL divergence.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Two scalar values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.computeKLD">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">computeKLD</code><span class="sig-paren">(</span><em class="sig-param">mean_a_flat</em>, <em class="sig-param">logvar_a_flat</em>, <em class="sig-param">device</em>, <em class="sig-param">mean_b_flat=0.0</em>, <em class="sig-param">logvar_b_flat=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#computeKLD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.computeKLD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the kullback-leibler divergence between two Gaussians.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mean_a_flat</strong> – mean of the Gaussian a.</p></li>
+<li><p><strong>logvar_a_flat</strong> – Log variance of the Gaussian a.</p></li>
+<li><p><strong>mean_b_flat</strong> – mean of the Gaussian b.</p></li>
+<li><p><strong>logvar_b_flat</strong> – Log variance of the Gaussian b.</p></li>
+<li><p><strong>device</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>LKD between two gausian with given parameters.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.plot_predictions">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">plot_predictions</code><span class="sig-paren">(</span><em class="sig-param">device</em>, <em class="sig-param">test_loader</em>, <em class="sig-param">trainings_loader</em>, <em class="sig-param">net</em>, <em class="sig-param">args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#plot_predictions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.plot_predictions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the predictions of 1D regression tasks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#main.test" title="main.test"><code class="xref py py-func docutils literal notranslate"><span class="pre">main.test()</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.regression_cubic_poly">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">regression_cubic_poly</code><span class="sig-paren">(</span><em class="sig-param">num_train=20</em>, <em class="sig-param">num_test=100</em>, <em class="sig-param">train_domain=(-3.5</em>, <em class="sig-param">3.5)</em>, <em class="sig-param">test_domain=(-5</em>, <em class="sig-param">5)</em>, <em class="sig-param">rseed=7</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#regression_cubic_poly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.regression_cubic_poly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a dataset for a 1D regression task with a cubic polynomial.</p>
+<p>The regression task modelled here is <img class="math" src="_images/math/fb106123d4c721c5b15d5ec6edf2ab4d3b31bbdf.png" alt="y = x^3 + \epsilon"/>,
+where <img class="math" src="_images/math/209678d5255dca13fb997f3418d0c42d4e93cc9d.png" alt="\epsilon \sim \mathcal{N}(0, 9I)"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_train</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Number of training samples.</p></li>
+<li><p><strong>num_test</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Number of test samples.</p></li>
+<li><p><strong>train_domain</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><em>tuple</em></a>) – Input domain for training samples.</p></li>
+<li><p><strong>test_domain</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)"><em>tuple</em></a>) – Input domain for training samples.</p></li>
+<li><p><strong>rseed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – To ensure reproducibility, the random seed for the data
+generation should be decoupled from the random seed of the
+simulation. Therefore, a new <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.random.RandomState</span></code> is
+created for the purpose of generating the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>train_x</strong>: Generated training inputs.</p></li>
+<li><p><strong>test_x</strong>: Generated test inputs.</p></li>
+<li><p><strong>train_y</strong>: Generated training outputs.</p></li>
+<li><p><strong>test_y</strong>: Generated test outputs.</p></li>
+</ul>
+<p>Data is returned in form of 2D arrays of class <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.sampleGaussian">
+<code class="sig-prename descclassname">lib.utils.</code><code class="sig-name descname">sampleGaussian</code><span class="sig-paren">(</span><em class="sig-param">mu</em>, <em class="sig-param">logvar</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#sampleGaussian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.sampleGaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get one sample from a Gaussian using the reparametrization trick.</p>
+<p>Assume you parametrize a Gaussian with mu and var.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mu</strong> – Vector of numbers inticating the mean of the Gaussian.</p></li>
+<li><p><strong>logvar</strong> – Vector of numbers inticating the logvar of the Gaussian.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A vector (one sample) drawn from a Gaussian parametrized
+by mu and logvar.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tutorial 3</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#controller-for-simulations">Controller for simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-linear-layer-module-that-maintains-its-own-parameters">A linear layer module that maintains its own parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-of-a-multi-layer-perceptron-mlp">Implementation of a Multi-layer Perceptron (MLP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-collection-of-helper-functions">A collection of helper functions</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Learning in deep artificial and biological neuronal networks</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Johannes von Oswald, Christian Henning.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

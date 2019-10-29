@@ -1,0 +1,32 @@
+.. _api-reference-label:
+
+API
+***
+
+.. contents::
+
+The API describes all functionalities implemented for this exercise. 
+Of particular interest is the :mod:`main` script, which can be used to validate an implementation.
+
+The module :mod:`lib.utils` contains the missing functionalities that have to be implemented. 
+You have to **precisely follow the interface as described in section** :mod:`lib.utils` when implementing the missing functionalities!
+
+.. automodule:: main
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: lib.linear_layer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+.. automodule:: lib.mlp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: lib.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
