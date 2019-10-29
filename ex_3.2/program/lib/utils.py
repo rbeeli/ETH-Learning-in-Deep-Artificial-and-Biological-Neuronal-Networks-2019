@@ -91,11 +91,10 @@ def sampleGaussian(mu, logvar):
         A vector (one sample) drawn from a Gaussian parametrized 
         by mu and logvar.
     """
-    
-    sample = None
 
-    if sample is None:
-        raise NotImplementedError('TODO implement')
+    var = torch.exp(logvar)
+    sample = mu + torch.sqrt(var) * torch.randn(mu.shape)
+
     return sample
 
 
@@ -120,17 +119,13 @@ def computeELBO(net, predictions, targets, device, args):
     # Be aware of the reduction='mean' in the computation of the mse loss below.
     # NOTE: We use a sample size of 1 during training and in args you
     # can get the information of the datasize size.
+    N = args.num_train_samples
+    B = 1
 
-    nll_scale = None
+    # reduction='mean' equals factor 1/M, hence we can ignore it
+    loss = N/B * 0.5*F.mse_loss(predictions, targets, reduction='mean')
 
-    if nll_scale is None:
-        raise NotImplementedError('TODO implement')
-    
-    loss = 0.5*F.mse_loss(predictions, targets, reduction='mean')
-
-    nll = nll_scale * loss
-
-    return nll, kl
+    return loss, kl
 
 def computeKLD(mean_a_flat, logvar_a_flat, device,
                                             mean_b_flat=0.0, logvar_b_flat=1.0):
@@ -149,15 +144,10 @@ def computeKLD(mean_a_flat, logvar_a_flat, device,
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
     # https://arxiv.org/abs/1312.6114
-    
-    logvar_b_flat = torch.log(torch.tensor(logvar_b_flat).to(device))
-    mean_b_flat = torch.tensor(mean_b_flat).to(device)
 
-    kl = None
+    var_a_flat = torch.exp(logvar_a_flat)
+    kl = -0.5 * torch.sum((1 + logvar_a_flat) - mean_a_flat**2 + var_a_flat)
 
-    if kl is None:
-        raise NotImplementedError('TODO implement')
-    
     return kl
 
 class RegressionDataset(Dataset):
