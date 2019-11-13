@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.spiking_functions &#8212; Tutorial 5.1  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.spiking_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementing, training, and evaluating a spiking neural network (:mod:`lib.spiking_functions`)</span>
+<span class="sd">--------------------------------------------------------------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.spiking_functions` contains custom functions that should</span>
+<span class="sd">be used for running, training and evaluating spiking networks. Specifically,</span>
+<span class="sd">you must implement the spike nonlinearity function, as well as the functions</span>
+<span class="sd">computing the loss and the accuracy on the membrane potential of the output</span>
+<span class="sd">neurons. </span>
+
+<span class="sd">.. autosummary::</span>
+<span class="sd">    lib.spiking_functions.spike_function</span>
+<span class="sd">    lib.spiking_functions.loss_on_voltage</span>
+<span class="sd">    lib.spiking_functions.accuracy_on_voltage</span>
+
+<span class="sd">.. math:</span>
+<span class="sd">    \usepackage{dsfont}</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Please fill out identification details in</span>
+<span class="c1">#   lib/spiking_layer.py</span>
+<span class="c1">#   lib/spiking_functions.py</span>
+<span class="c1">#   theory_question.txt</span>
+
+<span class="c1"># Student name :</span>
+<span class="c1"># Student ID   :</span>
+<span class="c1"># Email address:</span>
+
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+
+<span class="n">cross_entropy_loss</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
+
+<div class="viewcode-block" id="spike_function"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.spike_function">[docs]</a><span class="k">def</span> <span class="nf">spike_function</span><span class="p">(</span><span class="n">D</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Outputs a spike when the input is greater than zero.</span>
+
+<span class="sd">    This function takes :math:`D = ( U - U_{threshold} )` as input,</span>
+<span class="sd">    which is the amount by which the membrane potential of neurons is above the</span>
+<span class="sd">    membrane threshold :math:`U_{threshold} \in \mathbb{R}`. There are :math:`M`</span>
+<span class="sd">    neurons in a layer and minibatch size is :math:`B`, hence</span>
+<span class="sd">    :math:`D \in \mathbb{R}^{B \times M}`.</span>
+
+<span class="sd">    This function computes the spiking nonlinearity, which should</span>
+<span class="sd">    produce a spike when a neuron&#39;s membrane potential exceeds or is equal</span>
+<span class="sd">    to the membrane threshold potential i.e. when :math:`U_i - U_{threshold}</span>
+<span class="sd">    \geq 0`.</span>
+
+<span class="sd">    The spiking nonlinearity we use here is the simple Heaviside step function,</span>
+<span class="sd">    :math:`\Theta (\cdot)`, defined as</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \Theta(x) :=</span>
+<span class="sd">        \begin{cases}</span>
+<span class="sd">            0, &amp; x &lt; 0 \\</span>
+<span class="sd">            1, &amp; x \geq 0</span>
+<span class="sd">        \end{cases}</span>
+<span class="sd">        :label: eq-heaviside</span>
+
+<span class="sd">    You must code the :meth:`spike_function` method to</span>
+<span class="sd">    take :math:`D = ( U - U_{threshold} ) \in \mathbb{R}^{B \times M}` as </span>
+<span class="sd">    input and compute :math:`\Theta(D)` elementwise for each entry in the </span>
+<span class="sd">    matrix.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        D: A matrix of shape :math:`B \times M` representing</span>
+<span class="sd">            :math:`U - U_{threshold}`, the difference between the membrane</span>
+<span class="sd">            potential of each of the :math:`M` neurons in each of the</span>
+<span class="sd">            :math:`B` images of the mini-batch.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The output spikes, obtained by applying :math:`\Theta (\cdot)`</span>
+<span class="sd">        (defined in eq. :eq:`eq-heaviside`) elementwise to D.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># S = ...</span>
+
+    <span class="c1"># return S</span>
+
+
+<div class="viewcode-block" id="loss_on_voltage"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.loss_on_voltage">[docs]</a><span class="k">def</span> <span class="nf">loss_on_voltage</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes cross entropy loss on the maximum membrane voltage of the </span>
+<span class="sd">    output units.</span>
+
+<span class="sd">    Specifically, this function takes a set of output voltages in form of a </span>
+<span class="sd">    matrix :math:`U \in \mathbb{R}^{B \times t_{max} \times M}`,</span>
+<span class="sd">    where :math:`B` denotes the size of</span>
+<span class="sd">    the mini-batch, :math:`t_{max}` the number of timesteps during which each</span>
+<span class="sd">    mini-batch is presented, and :math:`M` the number of output units. </span>
+<span class="sd">    Additionally, it takes a set of target labels </span>
+<span class="sd">    :math:`T \in \mathbb{N}^{B}`, indicating the actual class of each image </span>
+<span class="sd">    :math:`b` in the current mini-batch.</span>
+
+<span class="sd">    This function finds the maximum membrane voltage for each output unit and </span>
+<span class="sd">    for each element of the mini-batch and calculates the mean of the cross </span>
+<span class="sd">    entropies.</span>
+
+<span class="sd">    The calculation is as follows:</span>
+
+<span class="sd">    Letting :math:`Q_{b,i} = \max_t S_{b,:,i}` be the maximum membrane potential</span>
+<span class="sd">    across all timesteps for each output neuron :math:`i` for each image</span>
+<span class="sd">    :math:`b`, we calculate the cross entropy loss:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        CELoss(Q, T) = \frac{1}{B} \sum_{b=1}^{B} - Q_{b, T_b} +</span>
+<span class="sd">         \log \left( \sum_j \exp ( Q_{b, j} ) \right)</span>
+
+<span class="sd">    You may wish to refer to the pytorch documentation for its native</span>
+<span class="sd">    :class:`torch.nn.CrossEntropyLoss` class and use it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        U: The output voltage, i.e., the matrix :math:`U`.</span>
+<span class="sd">        T: The target class, i.e., the matrix :math:`T`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The cross entropy loss for the maximum membrane potentials.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># Q ... </span>
+
+    <span class="c1"># return ...</span>
+
+
+<div class="viewcode-block" id="accuracy_on_voltage"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.accuracy_on_voltage">[docs]</a><span class="k">def</span> <span class="nf">accuracy_on_voltage</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the classification accuracy of the spiking network based on </span>
+<span class="sd">    the maximum voltage of the output units.</span>
+
+<span class="sd">    Takes a set of output voltages in form of a matrix</span>
+<span class="sd">    :math:`U \in \mathbb{R}^{B \times t_{max} \times M}`,</span>
+<span class="sd">    where :math:`B` denotes the size of</span>
+<span class="sd">    the mini-batch, :math:`t_{max}` the number of timesteps during which each</span>
+<span class="sd">    mini-batch is presented, and :math:`M` the number of output units. </span>
+<span class="sd">    Additionally, this ``Function`` requires a set of targets</span>
+<span class="sd">    :math:`T \in \mathbb{N}^{B}`, indicating the correct classes of the current</span>
+<span class="sd">    mini-batch.</span>
+
+<span class="sd">    Using these two arguments, it finds the output neurons that have the highest</span>
+<span class="sd">    membrane voltage for each image, and compares these with the target labels </span>
+<span class="sd">    to compute the accuracy.</span>
+
+<span class="sd">    Letting :math:`Q_{b,i} = \max_t S_{b,:,i}` be the maximum membrane potential</span>
+<span class="sd">    across all timesteps for each output neuron :math:`i` for each image</span>
+<span class="sd">    :math:`b`,</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        Accuracy = \frac{1}{B} \sum_{b=1}^{B} 1[ \arg\max_{i} Q_{b,:} = T_b ]</span>
+
+<span class="sd">    where :math:`1[\cdot]` is the indicator function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        U: The output voltages, i.e., the matrix :math:`U`.</span>
+<span class="sd">        T: The target classes, i.e., the vector :math:`T`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The classification accuracy of the current batch.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># Q ...</span>
+ 
+    <span class="c1"># return ...</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 5.1</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
