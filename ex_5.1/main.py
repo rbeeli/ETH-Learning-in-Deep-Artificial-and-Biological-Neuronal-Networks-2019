@@ -41,6 +41,7 @@ import lib.spiking_functions as sf
 from lib.snn import SNN
 from lib import utils
 
+
 def train(args, device, x, y, net):
     r"""Trains the given network on the MNIST dataset.
 
@@ -210,8 +211,7 @@ def run():
     np.random.seed(args.random_seed)
     random.seed(args.random_seed)
 
-    # Ensure that runs are reproducible even on GPU. Note, this slows down
-    # training!
+    # Ensure that runs are reproducible even on GPU. Note, this slows down training!
     # https://pytorch.org/docs/stable/notes/randomness.html
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False

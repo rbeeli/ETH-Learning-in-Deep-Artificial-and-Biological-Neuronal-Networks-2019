@@ -85,14 +85,9 @@ figure out how to turn the ODEs into code appropriately.
 
 """
 
-# Please fill out identification details in
-#   lib/spiking_layer.py
-#   lib/spiking_functions.py
-#   theory_question.txt
-
-# Student name :
-# Student ID   :
-# Email address:
+# Name:           Rino Beeli
+# Student ID:     15-709-371 (UZH external)
+# Email:          rbeeli@student.ethz.ch
 
 import torch
 import torch.nn as nn
@@ -150,10 +145,8 @@ class SpikingLayer(nn.Module):
         self.compute_spikes = sf.spike_function
 
         # Create and initialize weights.
-        self._weights = nn.Parameter(torch.Tensor(out_features, in_features),
-                                     requires_grad=True)
-        nn.init.normal_(self._weights, mean=0.0, \
-                                std=args.weight_scale/np.sqrt(in_features))
+        self._weights = nn.Parameter(torch.Tensor(out_features, in_features), requires_grad=True)
+        nn.init.normal_(self._weights, mean=0.0, std=args.weight_scale/np.sqrt(in_features))
 
     @property
     def weights(self):
@@ -174,10 +167,8 @@ class SpikingLayer(nn.Module):
 
         Returns:
             The updated membrane potential of the neurons in the layer.
-
         """
-        raise NotImplementedError('TODO implement')
-        # return ...
+        return self.beta * ((U - self.u_rest) - self.R * I) - S * (self.u_threshold - self.u_rest)
 
     def update_H(self, H, inputs):
         r"""Updates the state of the auxiliary variable for alpha-shaped
@@ -196,10 +187,8 @@ class SpikingLayer(nn.Module):
 
         Returns:
             The updated auxiliary current variable for the neurons in the layer.
-
         """
-        raise NotImplementedError('TODO implement')
-        # return ...
+        return self.phi * H + inputs
 
     def update_I(self, I, H):
         r"""Updates the post-synaptic current.
@@ -216,8 +205,7 @@ class SpikingLayer(nn.Module):
             The updated post-synaptic current of the neurons in the layer.
             
         """
-        raise NotImplementedError('TODO implement')
-        # return ...
+        return self.gamma * I + H
 
     def forward(self, X):
         r"""Computes the output activation of a spiking layer.
@@ -253,18 +241,17 @@ class SpikingLayer(nn.Module):
               time steps.
             - **S**: The spiking activity of all neurons of the layer in all 
               time steps.
-
         """
 
         device = X.device
         dtype = torch.float
 
-        num_h = self.weights.shape[0] # number of neurons in the layer
-        t_max  = X.shape[1]
+        num_h = self.weights.shape[0]  # number of neurons in the layer
+        t_max = X.shape[1]
         batch_size = X.shape[0]
 
         # Compute the total input to the layer in all time steps
-        inputs = torch.einsum("abc,cd->abd", (X, self.weights.t()))
+        inputs = torch.einsum("abc,cd->abd", [X, self.weights.t()])
 
         # Create lists to store the network states in each time step
         U = [[]]*t_max  # membrane potential
@@ -273,34 +260,28 @@ class SpikingLayer(nn.Module):
         I = [[]]*t_max  # post-synaptic current
 
         # Initialize states
-        U[0] = self.u_rest * torch.ones((batch_size, num_h), device=device,
-                                                             dtype=dtype)
+        U[0] = self.u_rest * torch.ones((batch_size, num_h), device=device, dtype=dtype)
         S[0] = torch.zeros_like(U[0])
         H[0] = torch.zeros_like(U[0])
         I[0] = torch.zeros_like(U[0])
 
         # Compute hidden layer state at each time step
         for t in range(1, t_max):
-
             # Compute the post-synaptic current
-            raise NotImplementedError('TODO implement')
-            # H[t] = self.update_H(...)
-            # I[t] = self.update_I(...)
+            H[t] = self.update_H(H[t-1], inputs[:, t-1, :])
+            I[t] = self.update_I(I[t-1], H[t-1])
 
             # Compute the membrane potential
-            raise NotImplementedError('TODO implement')
-            # U[t] = self.update_U(...)
+            U[t] = self.update_U(U[t-1], I[t-1], S[t-1])
 
             # Compute the spiking activity
-            raise NotImplementedError('TODO implement')
-            # S[t] = self.compute_spikes(...)
+            S[t] = self.compute_spikes(U[t] - self.u_threshold)
 
         U = torch.stack(U, dim=1)
         S = torch.stack(S, dim=1)
 
         return U, S
 
+
 if __name__ == '__main__':
     pass
-
-

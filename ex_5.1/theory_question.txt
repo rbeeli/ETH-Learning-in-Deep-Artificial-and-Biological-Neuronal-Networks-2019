@@ -1,24 +1,18 @@
 Tutorial 5.1 Theory Question
 
 
-Name:
-Student ID:
-Email:
+Name:           Rino Beeli
+Student ID:     15-709-371 (UZH external)
+Email:          rbeeli@student.ethz.ch
 
 
 Question: Observe the performance of the current implementation (i.e. in terms of correctly
-classified images) and discuss what the reason is for obtaining these poor results. As a hint, you can plot the distributions of the weights before and after training using the command line argument --plot_weight_hist.
+classified images) and discuss what the reason is for obtaining these poor results.
+As a hint, you can plot the distributions of the weights before and after training
+using the command line argument --plot_weight_hist.
+
 
 Answer: --- **Remark** - Answer should be less than 200 words. ---
 
-
-
-
-
-
-
-
-
-
-
-
+In the plot, we see that the dispersion of the trained compared to the initial weights is different. The trained weights
+show a higher variance.

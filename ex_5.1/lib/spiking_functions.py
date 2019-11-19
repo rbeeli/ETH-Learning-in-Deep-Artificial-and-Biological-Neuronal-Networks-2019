@@ -31,14 +31,9 @@ neurons.
 
 """
 
-# Please fill out identification details in
-#   lib/spiking_layer.py
-#   lib/spiking_functions.py
-#   theory_question.txt
-
-# Student name :
-# Student ID   :
-# Email address:
+# Name:           Rino Beeli
+# Student ID:     15-709-371 (UZH external)
+# Email:          rbeeli@student.ethz.ch
 
 
 import torch
@@ -88,10 +83,7 @@ def spike_function(D):
         (defined in eq. :eq:`eq-heaviside`) elementwise to D.
 
     """
-    raise NotImplementedError('TODO implement')
-    # S = ...
-
-    # return S
+    return (D >= 0).type(D.dtype)
 
 
 def loss_on_voltage(U, T):
@@ -131,10 +123,8 @@ def loss_on_voltage(U, T):
     Returns:
         (float): The cross entropy loss for the maximum membrane potentials.
     """
-    raise NotImplementedError('TODO implement')
-    # Q ... 
-
-    # return ...
+    (Q, _) = torch.max(U, 1)
+    return cross_entropy_loss(Q, T.type(torch.LongTensor))
 
 
 def accuracy_on_voltage(U, T):
@@ -171,7 +161,7 @@ def accuracy_on_voltage(U, T):
         (float): The classification accuracy of the current batch.
 
     """
-    raise NotImplementedError('TODO implement')
-    # Q ...
- 
-    # return ...
+    (Q, _) = torch.max(U, 1)
+    B = U.shape[0]
+    acc = 1/B * torch.sum((torch.argmax(Q, dim=1) == T).type(torch.FloatTensor))
+    return acc
