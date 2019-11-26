@@ -1,0 +1,1329 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>API &#8212; Tutorial 5.2  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Testing" href="tests.html" />
+    <link rel="prev" title="Learning in deep artificial and biological neuronal networks" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="api">
+<span id="api-reference-label"></span><h1><a class="toc-backref" href="#id1">API</a><a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#api" id="id1">API</a><ul>
+<li><a class="reference internal" href="#controller-for-simulations-main" id="id2">Controller for simulations (<a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a>)</a></li>
+<li><a class="reference internal" href="#implementation-of-a-spiking-multilayer-perceptron-lib-snn" id="id3">Implementation of a spiking multilayer perceptron (<a class="reference internal" href="#module-lib.snn" title="lib.snn"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.snn</span></code></a>)</a></li>
+<li><a class="reference internal" href="#implementing-training-and-evaluating-a-spiking-neural-network-lib-spiking-functions" id="id4">Implementing, training, and evaluating a spiking neural network (<a class="reference internal" href="#module-lib.spiking_functions" title="lib.spiking_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code></a>)</a></li>
+<li><a class="reference internal" href="#a-spiking-layer-module-that-maintains-its-own-parameters-lib-spiking-layer" id="id5">A spiking layer module that maintains its own parameters (<a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a>)</a></li>
+<li><a class="reference internal" href="#a-collection-of-helper-functions-lib-utils" id="id6">A collection of helper functions (<a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a>)</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>The API describes all functionalities implemented for this exercise. Of particular interest is the <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> script, which can be used to validate an implementation (see <a class="reference internal" href="tests.html#tests-reference-label"><span class="std std-ref">testing</span></a> for how to properly verify your implementation).</p>
+<p>The modules <a class="reference internal" href="#module-lib.spiking_functions" title="lib.spiking_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code></a> and <a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a> contain the missing functionalities that have to be implemented. There is a new theory question in week 2. Don’t forget to answer the theory question in the file <code class="docutils literal notranslate"><span class="pre">theory_question.txt</span></code> and submit the completed .txt file with your code.</p>
+<dl class="docutils">
+<dt>Throughout, the following notation is used:</dt>
+<dd><ul class="first last simple">
+<li><img class="math" src="_images/math/169c982b5e649cd1bd6445df5583affe427ea269.png" alt="U"/> : The membrane potential.</li>
+<li><img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/> : The post-synaptic current.</li>
+<li><img class="math" src="_images/math/1dbc400fcc213305415872f9f625cd2828f97a00.png" alt="S"/> : The spiking activity.</li>
+</ul>
+</dd>
+</dl>
+<span class="target" id="module-main"></span><div class="section" id="controller-for-simulations-main">
+<h2><a class="toc-backref" href="#id2">Controller for simulations (<a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a>)</a><a class="headerlink" href="#controller-for-simulations-main" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-main" title="main"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main</span></code></a> is an executable script that controls the simulations
+(i.e., the training and testing of MNIST digit classification tasks).</p>
+<p>For more usage information, check out:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> python3 main.py --help
+</pre></div>
+</div>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.train</span></code></a>(args,&nbsp;device,&nbsp;x,&nbsp;y,&nbsp;net)</td>
+<td>Trains the given network on the MNIST dataset.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#main.test" title="main.test"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.test</span></code></a>(args,&nbsp;device,&nbsp;x,&nbsp;y,&nbsp;net)</td>
+<td>Tests a trained network by computing the classification accuracy on the test set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#main.run" title="main.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main.run</span></code></a>()</td>
+<td>Runs the script.</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="main.train">
+<code class="descclassname">main.</code><code class="descname">train</code><span class="sig-paren">(</span><em>args</em>, <em>device</em>, <em>x</em>, <em>y</em>, <em>net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Trains the given network on the MNIST dataset.</p>
+<p>The <a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main.train</span></code></a> method takes data (x, y) and a spiking neural net,
+puts the net in training mode, and sets up the optimiser. Then, for each
+epoch, it runs through the whole MNIST dataset once, updating the weights
+once every mini-batch, after the images in this mini-batch have been
+converted to spike trains.
+Note, the <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<a class="reference internal" href="#lib.spiking_functions.loss_on_spikes" title="lib.spiking_functions.loss_on_spikes"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.spiking_functions.loss_on_spikes()</span></code></a> is used to compute
+the loss.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</li>
+<li><strong>device</strong> (<em>torch.device</em>) – The PyTorch device to be used.</li>
+<li><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><em>torch.Tensor</em></a>) – The training inputs.</li>
+<li><strong>y</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><em>torch.Tensor</em></a>) – The training targets.</li>
+<li><strong>net</strong> (<a class="reference internal" href="#lib.snn.SNN" title="lib.snn.SNN"><em>lib.snn.SNN</em></a>) – The spiking neural network.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.test">
+<code class="descclassname">main.</code><code class="descname">test</code><span class="sig-paren">(</span><em>args</em>, <em>device</em>, <em>x</em>, <em>y</em>, <em>net</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tests a trained network by computing the classification accuracy on the
+test set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#main.train" title="main.train"><code class="xref py py-func docutils literal notranslate"><span class="pre">train()</span></code></a>.</li>
+<li><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><em>torch.Tensor</em></a>) – The testing inputs.</li>
+<li><strong>y</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><em>torch.Tensor</em></a>) – The testing targets.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The classification accuracy for the
+test data (x, y) when using the network <code class="docutils literal notranslate"><span class="pre">net</span></code>.
+Note, the <code class="docutils literal notranslate"><span class="pre">Function</span></code>
+<a class="reference internal" href="#lib.spiking_functions.accuracy_on_spikes" title="lib.spiking_functions.accuracy_on_spikes"><code class="xref py py-func docutils literal notranslate"><span class="pre">lib.spiking_functions.accuracy_on_spikes()</span></code></a> is used to compute
+the accuracy.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.run">
+<code class="descclassname">main.</code><code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the script.</p>
+<p>The <a class="reference internal" href="#main.run" title="main.run"><code class="xref py py-mod docutils literal notranslate"><span class="pre">main.run</span></code></a> method performs the following actions:</p>
+<ul class="simple">
+<li>Parses command-line arguments</li>
+<li>Sets random seeds to ensure deterministic computation</li>
+<li>Loads MNIST dataset</li>
+<li>Initiates training process</li>
+<li>Tests accuracy of final network</li>
+<li>Plots weight histograms if required</li>
+</ul>
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.snn"></span><div class="section" id="implementation-of-a-spiking-multilayer-perceptron-lib-snn">
+<h2><a class="toc-backref" href="#id3">Implementation of a spiking multilayer perceptron (<a class="reference internal" href="#module-lib.snn" title="lib.snn"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.snn</span></code></a>)</a><a class="headerlink" href="#implementation-of-a-spiking-multilayer-perceptron-lib-snn" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.snn" title="lib.snn"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.snn</span></code></a> implements a fully-connected spiking neural network.</p>
+<p>Internally, it will make use of <code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module
+<a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a> to define the spiking dynamics of all layers of the
+network.</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#lib.snn.SNN" title="lib.snn.SNN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.snn.SNN</span></code></a>(args[,&nbsp;n_in,&nbsp;n_out,&nbsp;n_hidden])</td>
+<td>Implementation of a fully-connected spiking neural network.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.snn.SNN.forward" title="lib.snn.SNN.forward"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.snn.SNN.forward</span></code></a>(x)</td>
+<td>Compute the outputs <img class="math" src="_images/math/276f7e256cbddeb81eee42e1efc348f3cb4ab5f8.png" alt="y"/> of the network.</td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="lib.snn.SNN">
+<em class="property">class </em><code class="descclassname">lib.snn.</code><code class="descname">SNN</code><span class="sig-paren">(</span><em>args, n_in=1, n_out=1, n_hidden=[10]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/snn.html#SNN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.snn.SNN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Implementation of a fully-connected spiking neural network.</p>
+<p>The <a class="reference internal" href="#lib.snn.SNN" title="lib.snn.SNN"><code class="xref py py-class docutils literal notranslate"><span class="pre">SNN</span></code></a> is implemented as a <a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Module" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Module</span></code></a>,
+which is a convenient object for building neural networks, since <code class="docutils literal notranslate"><span class="pre">Modules</span></code>
+can contain other <code class="docutils literal notranslate"><span class="pre">Modules</span></code>.  <code class="docutils literal notranslate"><span class="pre">Modules</span></code> can be instantiated
+multiple times, as with multiple instances of the same type of layers.
+Submodules, (which are themselves <code class="docutils literal notranslate"><span class="pre">Modules</span></code>) can
+easily be manipulated together as a whole <code class="docutils literal notranslate"><span class="pre">Module</span></code>. For example, the
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">parameters</span></code> for a <code class="docutils literal notranslate"><span class="pre">Module</span></code> includes all the <code class="xref py py-attr docutils literal notranslate"><span class="pre">parameters</span></code>
+attributes of its submodules which you can feed to the
+optimiser together.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Module</span></code> built here is a spiking neural network, constructed from
+layers of spiking neurons defined by in the <code class="xref py py-mod docutils literal notranslate"><span class="pre">spiking_layer</span></code> script.</p>
+<dl class="attribute">
+<dt id="lib.snn.SNN.depth">
+<code class="descname">depth</code><a class="headerlink" href="#lib.snn.SNN.depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of hidden layers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.snn.SNN.spiking_layers">
+<code class="descname">spiking_layers</code><a class="headerlink" href="#lib.snn.SNN.spiking_layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A container for your spiking
+layers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.ModuleList" title="(in PyTorch vmaster (1.4.0a0+dca123e ))">torch.nn.ModuleList</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>n_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Network input size.</li>
+<li><strong>n_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Network output size.</li>
+<li><strong>n_hidden</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – Size of each hidden layer of the network. This
+argument implicitly defines the <a class="reference internal" href="#lib.snn.SNN.depth" title="lib.snn.SNN.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a> of the network.</li>
+<li><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt>
+<code class="descname">depth</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.snn.SNN.depth" title="lib.snn.SNN.depth"><code class="xref py py-attr docutils literal notranslate"><span class="pre">depth</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.snn.SNN.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/snn.html#SNN.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.snn.SNN.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the outputs <img class="math" src="_images/math/276f7e256cbddeb81eee42e1efc348f3cb4ab5f8.png" alt="y"/> of the network.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><em>torch.Tensor</em></a>) – A tensor of shape
+<img class="math" src="_images/math/ad3249fb6f375ce454a4c99d4b115d34ffe7546b.png" alt="B \times t_{max} \times N"/>, where
+<img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> is mini-batch size, <img class="math" src="_images/math/3635dae2a468768581c03ae019a1435ee3b517ef.png" alt="t_{max}"/> is number of
+timesteps, and <img class="math" src="_images/math/f4170ed8938b79490d8923857962695514a8e4cb.png" alt="N"/> is the dimension of a flattened MNIST
+image (i.e. 784).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Tuple containing:<ul class="simple">
+<li><dl class="first docutils">
+<dt><strong>U_layers</strong> (list): A list of tensors of membrane potentials in</dt>
+<dd>each layer(other than the input), each with shape
+<img class="math" src="_images/math/044b8840b23c3719dd4715eed52784cc1798dd1f.png" alt="B \times t_{max} \times M"/>, where
+<img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> is mini-batch size, <img class="math" src="_images/math/3635dae2a468768581c03ae019a1435ee3b517ef.png" alt="t_{max}"/> is number of
+timesteps, and <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/> is the number of neurons in the
+layer.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><strong>S_layers</strong> (list): A list of tensors of spiking activities in</dt>
+<dd>each layer (other than the input), each
+with shape <img class="math" src="_images/math/044b8840b23c3719dd4715eed52784cc1798dd1f.png" alt="B \times t_{max} \times M"/>,
+where <img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> is mini-batch size, <img class="math" src="_images/math/3635dae2a468768581c03ae019a1435ee3b517ef.png" alt="t_{max}"/> is
+number of timesteps, and <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/> is the number of
+neurons in the layer.</dd>
+</dl>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)">tuple</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.spiking_functions"></span><div class="section" id="implementing-training-and-evaluating-a-spiking-neural-network-lib-spiking-functions">
+<h2><a class="toc-backref" href="#id4">Implementing, training, and evaluating a spiking neural network (<a class="reference internal" href="#module-lib.spiking_functions" title="lib.spiking_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code></a>)</a><a class="headerlink" href="#implementing-training-and-evaluating-a-spiking-neural-network-lib-spiking-functions" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.spiking_functions" title="lib.spiking_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code></a> contains custom functions that should
+be used for running, training and evaluating spiking networks. Specifically,
+you must implement the surrogate gradient for the spiking nonlinearity, as well
+as the functions computing the loss and the accuracy on the spike trains of the
+output neurons. You will also implement a function that calculates a
+regularisation loss term on the spiking activities.</p>
+<p>New functionality can be added to
+<a class="reference external" href="https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html">autograd</a> by creating a subclass of class <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>.
+If you have pasted your answer to <a class="reference internal" href="#lib.spiking_functions.spike_function" title="lib.spiking_functions.spike_function"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.spike_function()</span></code></a>
+from last week, then the forward pass
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.forward" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.forward()</span></code></a> is already implemented for you in
+<a class="reference internal" href="#lib.spiking_functions.SurrogateSpike.forward" title="lib.spiking_functions.SurrogateSpike.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.SurrogateSpike.forward()</span></code></a>.</p>
+<p>As discussed in the lecture and in the exercise session, we will use the
+derivative of the scaled logistic function for the surrogate gradient. The
+code for the backward pass <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.backward" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.backward()</span></code></a>,
+with normalisation and scaling, is already
+implemented for you in <a class="reference internal" href="#lib.spiking_functions.SurrogateSpike.forward" title="lib.spiking_functions.SurrogateSpike.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.SurrogateSpike.forward()</span></code></a>.
+What is missing is the function that calculates the surrogate
+gradient: <a class="reference internal" href="#lib.spiking_functions.derivative_logistic" title="lib.spiking_functions.derivative_logistic"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.derivative_logistic()</span></code></a>. You must derive
+and implement the gradient of the scaled logistic function i.e.</p>
+<blockquote>
+<div><div class="math">
+<p><img src="_images/math/565e8f0d1a6de85ab180b36efca6ae88aec0fae6.png" alt="\frac{d}{dx} \left[\frac{1}{1 + \exp{(-kx)}}\right]"/></p>
+</div></div></blockquote>
+<p>Be careful to include the <img class="math" src="_images/math/0b7c1e16a3a8a849bb8ffdcdbf86f65fd1f30438.png" alt="k"/> in your derivation.</p>
+<p>You will also implement the loss function
+<a class="reference internal" href="#lib.spiking_functions.loss_on_spikes" title="lib.spiking_functions.loss_on_spikes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.loss_on_spikes()</span></code></a>, the accuracy function
+<a class="reference internal" href="#lib.spiking_functions.accuracy_on_spikes" title="lib.spiking_functions.accuracy_on_spikes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.accuracy_on_spikes()</span></code></a> and the function that
+computes the regularisation loss term
+<a class="reference internal" href="#lib.spiking_functions.spike_regularizer" title="lib.spiking_functions.spike_regularizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.spike_regularizer()</span></code></a>.</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_functions.logistic" title="lib.spiking_functions.logistic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.logistic</span></code></a>(x[,&nbsp;k])</td>
+<td>A scaled logistic function with maximal value of 1, midpoint at <img class="math" src="_images/math/a098f6561c6f5328410f2b9133b9db7b9f08e663.png" alt="x=0"/>, and steepness determined by the scale argument <img class="math" src="_images/math/0b7c1e16a3a8a849bb8ffdcdbf86f65fd1f30438.png" alt="k"/>.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_functions.derivative_logistic" title="lib.spiking_functions.derivative_logistic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.derivative_logistic</span></code></a>(x)</td>
+<td>The analytic derivative of the scaled logistic function.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_functions.spike_function" title="lib.spiking_functions.spike_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.spike_function</span></code></a>(D)</td>
+<td>Spike non-linearity function.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_functions.SurrogateSpike" title="lib.spiking_functions.SurrogateSpike"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.SurrogateSpike</span></code></a></td>
+<td>A class to house the functions for the forward and backward passes of a spiking nonlinearity.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_functions.SurrogateSpike.forward" title="lib.spiking_functions.SurrogateSpike.forward"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.SurrogateSpike.forward</span></code></a>(ctx,&nbsp;D)</td>
+<td>Computes the output of a spiking layer.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_functions.SurrogateSpike.backward" title="lib.spiking_functions.SurrogateSpike.backward"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.SurrogateSpike.backward</span></code></a>(…)</td>
+<td>Computes the surrogate gradient of the spiking layer.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_functions.loss_on_spikes" title="lib.spiking_functions.loss_on_spikes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.loss_on_spikes</span></code></a>(S,&nbsp;T)</td>
+<td>Computes cross entropy loss based on the spike trains of the output units.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_functions.accuracy_on_spikes" title="lib.spiking_functions.accuracy_on_spikes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.accuracy_on_spikes</span></code></a>(S,&nbsp;T)</td>
+<td>Computes classification accuracy of the spiking network based on the spike trains of the output units.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_functions.spike_regularizer" title="lib.spiking_functions.spike_regularizer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_functions.spike_regularizer</span></code></a>(…)</td>
+<td>Calculate the regularisation loss term for the spiking activity.</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="lib.spiking_functions.logistic">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">logistic</code><span class="sig-paren">(</span><em>x</em>, <em>k=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#logistic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.logistic" title="Permalink to this definition">¶</a></dt>
+<dd><p>A scaled logistic function with maximal value of 1, midpoint at
+<img class="math" src="_images/math/a098f6561c6f5328410f2b9133b9db7b9f08e663.png" alt="x=0"/>, and steepness determined by the scale argument <img class="math" src="_images/math/0b7c1e16a3a8a849bb8ffdcdbf86f65fd1f30438.png" alt="k"/>.</p>
+<p>Mathematically, this family of functions is given by:</p>
+<div class="math" id="equation-eq-logistic">
+<p><span class="eqno">(1)<a class="headerlink" href="#equation-eq-logistic" title="Permalink to this equation">¶</a></span><img src="_images/math/3164825c4f7a06f37c3296c96d936e8987ce7c3e.png" alt="\sigma(x) := \frac{1}{1 + \exp{(-kx)}}"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>torch.tensor</em>) – Input on which to compute the function.</li>
+<li><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Steepness of the logistic curve.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The logistic value of x.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(torch.tensor)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.spiking_functions.derivative_logistic">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">derivative_logistic</code><span class="sig-paren">(</span><em>x</em>, <em>k=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#derivative_logistic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.derivative_logistic" title="Permalink to this definition">¶</a></dt>
+<dd><p>The analytic derivative of the scaled logistic function.</p>
+<p>This function implements the derivative of
+<a class="reference internal" href="#lib.spiking_functions.logistic" title="lib.spiking_functions.logistic"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.logistic()</span></code></a> with respect to the input <img class="math" src="_images/math/a59f68a4202623bb859a7093f0316bf466e6f75d.png" alt="x"/>,
+i.e.</p>
+<div class="math">
+<p><img src="_images/math/565e8f0d1a6de85ab180b36efca6ae88aec0fae6.png" alt="\frac{d}{dx} \left[\frac{1}{1 + \exp{(-kx)}}\right]"/></p>
+</div><p>Please compute the derivative and implement it. Note that you can call
+<a class="reference internal" href="#lib.spiking_functions.logistic" title="lib.spiking_functions.logistic"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.logistic()</span></code></a> within this function if you want to.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>torch.tensor</em>) – Input on which to compute the derivative.</li>
+<li><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Steepness of the curve.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The derivative of the logistic on x.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(torch.tensor)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.spiking_functions.spike_function">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">spike_function</code><span class="sig-paren">(</span><em>D</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#spike_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.spike_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spike non-linearity function.</p>
+<p>This function takes <img class="math" src="_images/math/9921e6234c37cb5aa5058ff2a0d9580de9aca1f7.png" alt="D = ( U - U_{threshold} )"/> as input,
+which is the amount by which the membrane potential of neurons is above the
+membrane threshold <img class="math" src="_images/math/75263caf90181ae3cecd96057ffa55e71e1a3574.png" alt="U_{threshold} \in \mathbb{R}"/>. There are <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/>
+neurons in a layer and minibatch size is <img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/>, hence
+<img class="math" src="_images/math/2580cb4556c866ec16755b33fab03e5bb8a974c1.png" alt="D \in \mathbb{R}^{B \times M}"/>.</p>
+<p>This function computes the spiking nonlinearity, which should
+produce a spike when a neuron’s membrane potential exceeds or is equal
+to the membrane threshold potential i.e. when <img class="math" src="_images/math/67126ec9861bf0b11efe05254d9ea72d76522b01.png" alt="U_i - U_{threshold}
+\geq 0"/>.</p>
+<p>The spiking nonlinearity we use here is the simple Heaviside step function,
+<img class="math" src="_images/math/467daba4535c0c3e379f599cbbc9fa4b1758a516.png" alt="\Theta (\cdot)"/>, defined as</p>
+<div class="math" id="equation-eq-heaviside">
+<p><span class="eqno">(2)<a class="headerlink" href="#equation-eq-heaviside" title="Permalink to this equation">¶</a></span><img src="_images/math/e35458e15a58153c1466335a2679ab136de5f0aa.png" alt="\Theta(x) :=
+\begin{cases}
+    0, &amp; x &lt; 0 \\
+    1, &amp; x \geq 0
+\end{cases}"/></p>
+</div><p>Last week, you coded the <a class="reference internal" href="#lib.spiking_functions.spike_function" title="lib.spiking_functions.spike_function"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spike_function()</span></code></a> method to
+take <img class="math" src="_images/math/9708513ac38bcd98db7f2908e09bf789fd4fdd62.png" alt="D = ( U - U_{threshold} ) \in \mathbb{R}^{B \times M}"/> as
+input and compute <img class="math" src="_images/math/dd1e721feb05b2b40beaaa07617c828704477100.png" alt="\Theta(D)"/> elementwise for each entry in the
+matrix. This is the same function. You should paste the code you wrote last
+week for that function in this week’s function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>D</strong> – A matrix of shape <img class="math" src="_images/math/38bfbbf05e0286179912e5af831c770762b4d99c.png" alt="B \times M"/> representing
+<img class="math" src="_images/math/7837a7362895a0feaca50fca4a9bfa707e4f90f4.png" alt="U - U_{threshold}"/>, the difference between the membrane
+potential of each of the <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/> neurons in each of the
+<img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> images of the mini-batch.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The output spikes, obtained by applying <img class="math" src="_images/math/467daba4535c0c3e379f599cbbc9fa4b1758a516.png" alt="\Theta (\cdot)"/>
+(defined in eq. <a class="reference internal" href="#equation-eq-heaviside">(2)</a>) elementwise to D.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.spiking_functions.SurrogateSpike">
+<em class="property">class </em><code class="descclassname">lib.spiking_functions.</code><code class="descname">SurrogateSpike</code><a class="reference internal" href="_modules/lib/spiking_functions.html#SurrogateSpike"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.SurrogateSpike" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.function.Function</span></code></p>
+<p>A class to house the functions for the forward and backward passes of a
+spiking nonlinearity.</p>
+<p>Because this class is an instance of <a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.autograd.Function</span></code></a>,
+we are able to use all of PyTorch’s autograd functionality. It has two
+components: the forward function and the backward function.</p>
+<p>If you have pasted your answer to
+<a class="reference internal" href="#lib.spiking_functions.spike_function" title="lib.spiking_functions.spike_function"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.spike_function()</span></code></a>
+from last week, then the forward pass
+<a class="reference external" href="https://pytorch.org/docs/master/autograd.html#torch.autograd.Function.forward" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.autograd.Function.forward()</span></code></a> is already implemented for you.</p>
+<p>For the backward pass, typically we take the partial derivative of the
+forward nonlinearity with respect to each element of the inputs that
+is tagged as requiring the gradient. However, the gradient
+of the step function (and many other spiking non-linearities)
+is zero everywhere except at 0 where it is ill-defined. Therefore it is
+necessary to use the gradient of a different function for the backward
+pass. This is the ‘surrogate gradient’.</p>
+<p>Here we will take the derivative of the logistic function with respect to
+its input as the surrogate gradient, as implemented in
+<a class="reference internal" href="#lib.spiking_functions.derivative_logistic" title="lib.spiking_functions.derivative_logistic"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_functions.derivative_logistic()</span></code></a>.</p>
+<dl class="attribute">
+<dt id="lib.spiking_functions.SurrogateSpike.scale">
+<code class="descname">scale</code><a class="headerlink" href="#lib.spiking_functions.SurrogateSpike.scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>The scale parameter that controls the steepness of the
+surrogate gradient.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">scale</code><em class="property"> = 20.0</em></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="lib.spiking_functions.SurrogateSpike.forward">
+<em class="property">static </em><code class="descname">forward</code><span class="sig-paren">(</span><em>ctx</em>, <em>D</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#SurrogateSpike.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.SurrogateSpike.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the output of a spiking layer.</p>
+<p>In the forward pass we compute a step function of the input Tensor
+and return it. This directly applies your <a class="reference internal" href="#lib.spiking_functions.spike_function" title="lib.spiking_functions.spike_function"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spike_function()</span></code></a>
+implemented already for last week’s tutorial.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>ctx</strong> – A context. Should be used to store activations that are needed
+in the backward pass. To achieve this we use the
+ctx.save_for_backward method.</li>
+<li><strong>D</strong> – A matrix of shape <img class="math" src="_images/math/38bfbbf05e0286179912e5af831c770762b4d99c.png" alt="B \times M"/> representing
+<img class="math" src="_images/math/017ce4183bd0c2df5e5c43b9fd34dd59c37fe881.png" alt="U_{b,i} - U_{threshold}"/>, the difference between the
+membrane potential of each of the <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/> neurons in each of
+the <img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> mini-batches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The output spikes, obtained by applying <img class="math" src="_images/math/bf5f70f6b431ca28235cd7c01cef26683ae7738f.png" alt="\Theta"/> (defined in
+eq. <a class="reference internal" href="#equation-eq-heaviside">(2)</a>) elementwise to D.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="lib.spiking_functions.SurrogateSpike.backward">
+<em class="property">static </em><code class="descname">backward</code><span class="sig-paren">(</span><em>ctx</em>, <em>grad_output</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#SurrogateSpike.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.SurrogateSpike.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the surrogate gradient of the spiking layer.</p>
+<p>In the backward pass we receive a Tensor D we need to compute the
+surrogate gradient of the loss with respect to the input, which
+represents the difference between the membrane potential of the layer
+and the membrane threshold:
+<img class="math" src="_images/math/9fcad12855bf9e06a895daddfce380468bd8121e.png" alt="D = ( U_{i} - U_{threshold} ) \in \mathbb{R}^{B \times M}"/>.
+Here we use the partial derivative of the scaled logistic function
+with respect to all input tensors that are flagged to require
+gradients.</p>
+<p>The derivative of the logistic function peaks at 0.25. We found that it
+works well to normalise the gradient by multiplying the gradient by
+4. In order to control the steepness of the surrogate gradient around
+the spike, we include the parameter <code class="docutils literal notranslate"><span class="pre">SurrogateSpike.scale</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ctx</strong> – A context.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="docutils">
+<dt>The gradient of the loss with respect to the</dt>
+<dd>input.</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">grad (torch.tensor)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.spiking_functions.loss_on_spikes">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">loss_on_spikes</code><span class="sig-paren">(</span><em>S</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#loss_on_spikes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.loss_on_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes cross entropy loss based on the spike trains of the output
+units.</p>
+<p>Takes a set of output spikes in form of a tensor
+<img class="math" src="_images/math/84d2a0cd6ab9b4d9b2cc9d23e6e5c4944add3826.png" alt="S \in \mathbb{R}^{B \times t_{max} \times M}"/>,
+where <img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> denotes the size of the mini-batch, <img class="math" src="_images/math/3635dae2a468768581c03ae019a1435ee3b517ef.png" alt="t_{max}"/> the
+number of timesteps during which each mini-batch is presented, and <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/>
+the number of output units. Additionally, it takes a set of target labels
+<img class="math" src="_images/math/2a3e26b1b5f85903a9c34c179448bfdd7b4e3c8b.png" alt="T \in \mathbb{N}^{B}"/>, indicating the true class of each image
+<img class="math" src="_images/math/57c9d14bb082716df9000146882ce365335d08f1.png" alt="b"/> in the current mini-batch.</p>
+<p>The loss calculated here is the cross-entropy loss applied to the
+total number of spikes over all timesteps for each output neuron for each
+image.</p>
+<p>It is calculated as follows:</p>
+<p>Let <img class="math" src="_images/math/88c616af08aed429c1e542f56ff258d6d1561a26.png" alt="Z_{b,i} = \sum_t S_{b,t,i}"/> be the total number of spikes over
+all timesteps for each output neuron <img class="math" src="_images/math/df0deb143e5ac127f00bd248ee8001ecae572adc.png" alt="i"/> for each image <img class="math" src="_images/math/57c9d14bb082716df9000146882ce365335d08f1.png" alt="b"/>.
+Then calculate the cross entropy loss:</p>
+<div class="math">
+<p><img src="_images/math/93db06ccd74cac1ae44ffeacef477ade7e57c1a9.png" alt="CELoss(Z, T) = \frac{1}{B} \sum_{b=1}^{B} - Z_{b, T_b} +
+\log \left( \sum_j \exp ( Z_{b, j} ) \right)"/></p>
+</div><p>You may wish to refer to the pytorch documentation for its native
+<a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.CrossEntropyLoss" title="(in PyTorch vmaster (1.4.0a0+dca123e ))"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.CrossEntropyLoss</span></code></a> class and use it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>S</strong> – The output spike trains, i.e., the matrix <img class="math" src="_images/math/1dbc400fcc213305415872f9f625cd2828f97a00.png" alt="S"/>.</li>
+<li><strong>T</strong> – The target activations, i.e., the matrix <img class="math" src="_images/math/f2d283a2071f9d043c9e0b0f794a8880fa0d3ce9.png" alt="T"/>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The cross entropy loss on the sum of spikes.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.spiking_functions.accuracy_on_spikes">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">accuracy_on_spikes</code><span class="sig-paren">(</span><em>S</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#accuracy_on_spikes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.accuracy_on_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes classification accuracy of the spiking network based on the
+spike trains of the output units.</p>
+<p>Takes a set of output spikes in form of a matrix
+<img class="math" src="_images/math/84d2a0cd6ab9b4d9b2cc9d23e6e5c4944add3826.png" alt="S \in \mathbb{R}^{B \times t_{max} \times M}"/>,
+where <img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> denotes the size of
+the mini-batch, <img class="math" src="_images/math/3635dae2a468768581c03ae019a1435ee3b517ef.png" alt="t_{max}"/> the number of timesteps during which each
+mini-batch is presented, and <img class="math" src="_images/math/450a8e2c2320d77181e0d4fc68c947e9a5de8ecb.png" alt="M"/> the number of output units.
+Additionally, this <code class="docutils literal notranslate"><span class="pre">Function</span></code> requires a set of targets
+<img class="math" src="_images/math/ebba797fb5a0957456a8f30461c363b34e5d6803.png" alt="T \in \mathbb{Z}^{B}"/>, indicating the correct classes of the current
+mini-batch.</p>
+<p>Using these two arguments, it finds the output neurons that have the highest
+membrane spiking rate for each image, and compares these with the target
+labels to compute the accuracy.</p>
+<p>Letting <img class="math" src="_images/math/88c616af08aed429c1e542f56ff258d6d1561a26.png" alt="Z_{b,i} = \sum_t S_{b,t,i}"/> be the summed number of spikes
+across all timesteps for each output neuron <img class="math" src="_images/math/df0deb143e5ac127f00bd248ee8001ecae572adc.png" alt="i"/> for each image
+<img class="math" src="_images/math/57c9d14bb082716df9000146882ce365335d08f1.png" alt="b"/>,</p>
+<div class="math">
+<p><img src="_images/math/971de0a5eba1bb0c31d09a859aa0da66733db1d3.png" alt="Accuracy = \frac{1}{B} \sum_{b=1}^{B} 1[ \arg\max_{i} Z_{b,:} = T_b]"/></p>
+</div><p>where <img class="math" src="_images/math/ab1ed048eba7c39c050ff911d1864e0526a19451.png" alt="1[\cdot]"/> is the indicator function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>S</strong> – The output spike trains, i.e., the matrix <img class="math" src="_images/math/1dbc400fcc213305415872f9f625cd2828f97a00.png" alt="S"/>.</li>
+<li><strong>T</strong> – The target classes, i.e., the vector <img class="math" src="_images/math/f2d283a2071f9d043c9e0b0f794a8880fa0d3ce9.png" alt="T"/>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The classification accuracy of the current batch.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.spiking_functions.spike_regularizer">
+<code class="descclassname">lib.spiking_functions.</code><code class="descname">spike_regularizer</code><span class="sig-paren">(</span><em>spikes_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_functions.html#spike_regularizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_functions.spike_regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the regularisation loss term for the spiking activity.</p>
+<p>Biological neurons usually do not fire at rates greater than around 20Hz.
+In order to regularise our networks so that the neurons do not fire at
+grossly unphysiological rates, we calculate an additional term to add to
+the training loss.</p>
+<p>Many different types of regularisation could work. Here you should implement
+a regularisation term that has two components:</p>
+<p>The first component sums all the spikes over all hidden layers, batch
+elements, timesteps and neurons, i.e.</p>
+<div class="math">
+<p><img src="_images/math/d404ead5e4d0e4f49009f87ae0f6f53801369b88.png" alt="\sum_{l} \sum_{i=0}^{M_l} \sum_{b, t} S_{l,b,t,i}"/></p>
+</div><p>where <img class="math" src="_images/math/540b97ddc1fe81e3c692294e172d09b6fc1022b4.png" alt="M_l"/> is the number of neurons in the hidden layer <img class="math" src="_images/math/b359488b993294ebbc2c7b30ab8f749dcbc6826d.png" alt="l"/>.
+This corresponds to an L1 regularization on the total number of spikes at
+the population, thus inducing sparsity at a population level.</p>
+<p>The second component regularizes the firing of individual neurons.
+It takes the mean squared sum of spikes for individual neurons (summed
+across batch elements and timestes), summed over all hidden layers, i.e.</p>
+<div class="math">
+<p><img src="_images/math/e8124050622002d41d1e4c080323f1241310f16e.png" alt="\sum_l \frac{1}{M_l} \sum_{i=0}^{M_l} \Big(\sum_{b,t} S_{l,b,t,i}\Big)^2"/></p>
+</div><p>This corresponds to an L2 norm in the firing rate of individual neurons,
+thus inducing neurons to have low firing rates.</p>
+<p>Finally, the regularisation loss term returned by this function consists of
+the sum of these two components.</p>
+<p>Please note that the inputs to this function only correspond to hidden
+spiking activity. Therefore you do not have to exclude any
+layers within this function because it is already done for you.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>spikes_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – a list of tensors of spikes, where each element
+corresponds to the spiking activity of a hidden layer and has shape
+<img class="math" src="_images/math/9805f44feec6f81d376d09e88b8236635edbb3c8.png" alt="B"/> (batch size) <img class="math" src="_images/math/62162946531ccbbcb5f7baef5c94a0e40205555e.png" alt="\times t_{max}"/> (number of timesteps
+<img class="math" src="_images/math/fb49abfd722437a127c8d2fac5e73ebdf664c5a6.png" alt="\times M_l"/> (number of hidden units in that layer).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The regularisation loss term.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.spiking_layer"></span><div class="section" id="a-spiking-layer-module-that-maintains-its-own-parameters-lib-spiking-layer">
+<h2><a class="toc-backref" href="#id5">A spiking layer module that maintains its own parameters (<a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a>)</a><a class="headerlink" href="#a-spiking-layer-module-that-maintains-its-own-parameters-lib-spiking-layer" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a> contains the implementation of a single
+spiking layer. The goal is to utilize the custom
+<code class="docutils literal notranslate"><span class="pre">Functions</span></code> implemented in module <a class="reference internal" href="#module-lib.spiking_functions" title="lib.spiking_functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code></a>
+and to provide a wrapper that takes care of managing the parameters
+(<img class="math" src="_images/math/953bde2ab2fca30897f66185e5b37b73747b8b46.png" alt="W"/>) of such a layer. The layers defined here will then be used in
+<a class="reference internal" href="#module-lib.snn" title="lib.snn"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.snn</span></code></a> to define a multi-layer spiking network.</p>
+<p>In biological networks, the electrical activity from a pre-synaptic spike leads
+to changes in the membrane potential of a post-synaptic neuron.
+In nature, this is a process involving many ions and channels.
+Here we will use a simplified model: the leaky integrate-and-fire
+model for spiking neurons. Such models are composed of 1) a description of the
+dynamics of the membrane potential, and 2) a mechanism for triggering spikes.</p>
+<p>In our implementation, the dynamics of the membrane potential, together with the
+dynamics of the current and spiking variables, are updated at each timestep
+based on a discrete implementation of a set of differential equations described
+below.</p>
+<p>The ODEs that you will implement sequentially update the membrane potentials
+<img class="math" src="_images/math/169c982b5e649cd1bd6445df5583affe427ea269.png" alt="U"/>, the auxiliary variable for the alpha function <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/>, and the
+current <img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/>. The equation for the membrane potential of neuron <img class="math" src="_images/math/df0deb143e5ac127f00bd248ee8001ecae572adc.png" alt="i"/>
+is:</p>
+<div class="math" id="equation-eq-u-ode">
+<p><span class="eqno">(3)<a class="headerlink" href="#equation-eq-u-ode" title="Permalink to this equation">¶</a></span><img src="_images/math/9c181a245fa92df2ec86ec60c3ef7b50b24ac00f.png" alt="\frac{dU_i}{dt} =&amp; - \frac{1}{\tau_{mem}} \left[ (U_i - U_{rest}) - R I_i
+\right] + S_i(t) \left( U_{rest} - U_{threshold} \right) \\"/></p>
+</div><p>Most commonly, post-synaptic currents resulting from spiking inputs from
+pre-synaptic neurons are modeled as exponential decay functions, where a spike
+causes an instantaneous increase in the post-synaptic membrane potential, which
+then decays exponentially with time i.e. <img class="math" src="_images/math/b61b4e131bc6fc0ba26fb61d46d39590fa4dead2.png" alt="u(t) = e^{-t}"/>, assuming the
+pre-synaptic spike occurs at <img class="math" src="_images/math/c9c0db14206d811c979283bc2269384bec23557d.png" alt="t=0"/>, and a resting potential of 0.
+A more biologically plausible model is an alpha-shaped post-synaptic current,
+where the post-synaptic current following a pre-synaptic spike has a finite rise
+time. In this case we would have <img class="math" src="_images/math/e59bb6fdaac5cc1f1155e234165f46eccb1d73b7.png" alt="u(t) = te^{-t}"/>. In this tutorial, we
+ask you to implement alpha-shaped post-synaptic currents by filling the methods
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_layer.update_H()</span></code> and <code class="xref py py-meth docutils literal notranslate"><span class="pre">lib.spiking_layer.update_I()</span></code>.
+These are based on the following equations:</p>
+<div class="math" id="equation-eq-h-ode">
+<p><span class="eqno">(4)<a class="headerlink" href="#equation-eq-h-ode" title="Permalink to this equation">¶</a></span><img src="_images/math/b6f1abdebd1ca5e2e85e97fcc8976eb657d91f7f.png" alt="\frac{dH_i}{dt} =&amp; - \frac{1}{\tau_{rise}} H_i (t) + \sum_j W_{ij} S_j (t)"/></p>
+</div><div class="math" id="equation-eq-i-ode">
+<p><span class="eqno">(5)<a class="headerlink" href="#equation-eq-i-ode" title="Permalink to this equation">¶</a></span><img src="_images/math/4008b9c0b116f67854d7199ca8e261a6a3cdc32d.png" alt="\frac{dI_i}{dt} =&amp; - \frac{1}{\tau_{syn}}  I_i (t) + H_i (t)"/></p>
+</div><p>All equations were derived during the tutorial session, and can be found in
+the tutorial slides. Note, however, that only a discrete version for the case
+of exponential-shaped post-synaptic currents was derived, and not for the
+alpha-shaped case, which is the one you need here. Therefore you will need to
+figure out how to turn the ODEs into code appropriately.</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_layer.SpikingLayer" title="lib.spiking_layer.SpikingLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_layer.SpikingLayer</span></code></a>(in_features,&nbsp;…)</td>
+<td>Implements a single spiking layer.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_layer.SpikingLayer.update_U" title="lib.spiking_layer.SpikingLayer.update_U"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_layer.SpikingLayer.update_U</span></code></a>(U,&nbsp;I,&nbsp;S)</td>
+<td>Updates the membrane potential.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_layer.SpikingLayer.update_I" title="lib.spiking_layer.SpikingLayer.update_I"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_layer.SpikingLayer.update_I</span></code></a>(I,&nbsp;H)</td>
+<td>Updates the post-synaptic current.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.spiking_layer.SpikingLayer.update_H" title="lib.spiking_layer.SpikingLayer.update_H"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_layer.SpikingLayer.update_H</span></code></a>(H,&nbsp;…)</td>
+<td>Updates the state of the auxiliary variable for alpha-shaped post-synaptic current.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.spiking_layer.SpikingLayer.forward" title="lib.spiking_layer.SpikingLayer.forward"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.spiking_layer.SpikingLayer.forward</span></code></a>(X)</td>
+<td>Computes the output activation of a spiking layer.</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="lib.spiking_layer.surrogate_spike_fn">
+<code class="descclassname">lib.spiking_layer.</code><code class="descname">surrogate_spike_fn</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#lib.spiking_layer.surrogate_spike_fn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="lib.spiking_layer.SpikingLayer">
+<em class="property">class </em><code class="descclassname">lib.spiking_layer.</code><code class="descname">SpikingLayer</code><span class="sig-paren">(</span><em>in_features</em>, <em>out_features</em>, <em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_layer.html#SpikingLayer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_layer.SpikingLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Implements a single spiking layer.</p>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.SpikingLayer</span></code> class contains all the parameters and
+variables necessary to implement a single spiking layer. It will be a
+submodule of the <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code> instance named <a class="reference internal" href="#lib.snn.SNN" title="lib.snn.SNN"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.snn.SNN</span></code></a>.
+You will use the class <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.SpikingLayer</span></code> to define your hidden
+layer and your output layer.</p>
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.tau_mem">
+<code class="descname">tau_mem</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.tau_mem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Membrane time constant.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.tau_syn">
+<code class="descname">tau_syn</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.tau_syn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synaptic time constant.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.tau_rise">
+<code class="descname">tau_rise</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.tau_rise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rise synaptic time constant.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.u_rest">
+<code class="descname">u_rest</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.u_rest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resting membrane potential.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.u_threshold">
+<code class="descname">u_threshold</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.u_threshold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Firing threshold.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.R">
+<code class="descname">R</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.R" title="Permalink to this definition">¶</a></dt>
+<dd><p>Membrane resistance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.gamma">
+<code class="descname">gamma</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decay rate for the post-synaptic current <img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.beta">
+<code class="descname">beta</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.beta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decay rate for the membrane potential <img class="math" src="_images/math/169c982b5e649cd1bd6445df5583affe427ea269.png" alt="U"/>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.phi">
+<code class="descname">phi</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decay rate for the auxiliary current variable <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.weights">
+<code class="descname">weights</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>The weight matrix <img class="math" src="_images/math/953bde2ab2fca30897f66185e5b37b73747b8b46.png" alt="W"/> of the layer.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body"><a class="reference external" href="https://pytorch.org/docs/master/nn.html#torch.nn.Parameter" title="(in PyTorch vmaster (1.4.0a0+dca123e ))">torch.nn.Parameter</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.spiking_layer.SpikingLayer.compute_spikes">
+<code class="descname">compute_spikes</code><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.compute_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spike non-linearity function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">func</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>in_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Size of the pre-synaptic layer.</li>
+<li><strong>out_features</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Size of the current layer.</li>
+<li><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt>
+<code class="descname">weights</code></dt>
+<dd><p>Getter for read-only attribute <a class="reference internal" href="#lib.spiking_layer.SpikingLayer.weights" title="lib.spiking_layer.SpikingLayer.weights"><code class="xref py py-attr docutils literal notranslate"><span class="pre">weights</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.spiking_layer.SpikingLayer.update_U">
+<code class="descname">update_U</code><span class="sig-paren">(</span><em>U</em>, <em>I</em>, <em>S</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_layer.html#SpikingLayer.update_U"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.update_U" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the membrane potential.</p>
+<p>Updates the membrane potential given the current and past states
+of the network as specified in eq. <a class="reference internal" href="#equation-eq-u-ode">(3)</a>. As a discretized
+version of eq. <a class="reference internal" href="#equation-eq-u-ode">(3)</a> please use the following:</p>
+<div class="math">
+<p><img src="_images/math/c927465b24b54e39ae14a9faedf0197df699c2c9.png" alt="U_i[n+1] = \beta \Big( (U_i[n] - U_{rest}) -RI_i[n] \Big)
+- S_i[n]\Big(U_{thr} - U_{rest} \Big)"/></p>
+</div><p>Note that this is not the most mathematically correct way
+to discretize eq. <a class="reference internal" href="#equation-eq-u-ode">(3)</a>, but for the purpose of the current
+tutorial we ask you to use the above discretized version. For more
+explanations, please refer to the <code class="docutils literal notranslate"><span class="pre">DiscretizedODEs.pdf</span></code> file in
+moodle.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>U</strong> – The membrane potential <img class="math" src="_images/math/169c982b5e649cd1bd6445df5583affe427ea269.png" alt="U"/>.</li>
+<li><strong>I</strong> – The post-synaptic current <img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/>.</li>
+<li><strong>S</strong> – The spiking activity <img class="math" src="_images/math/1dbc400fcc213305415872f9f625cd2828f97a00.png" alt="S"/>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The updated membrane potential of the neurons in the layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.spiking_layer.SpikingLayer.update_H">
+<code class="descname">update_H</code><span class="sig-paren">(</span><em>H</em>, <em>inputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_layer.html#SpikingLayer.update_H"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.update_H" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the state of the auxiliary variable for alpha-shaped
+post-synaptic current.</p>
+<p>Implementation of eq. <a class="reference internal" href="#equation-eq-h-ode">(4)</a>. Please note that the pre-synaptic
+inputs have already been multiplied by the weights at the beginning of
+the forward method. Therefore, you should only make sure you give the
+correct inputs argument to this function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>H</strong> – The auxiliary variable for the alpha-shaped post-synaptic
+currents <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/>.</li>
+<li><strong>inputs</strong> – The inputs (weighted spikes) to the layer in the current
+time step.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The updated auxiliary current variable for the neurons in the layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.spiking_layer.SpikingLayer.update_I">
+<code class="descname">update_I</code><span class="sig-paren">(</span><em>I</em>, <em>H</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_layer.html#SpikingLayer.update_I"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.update_I" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the post-synaptic current.</p>
+<p>Updates the post-synaptic current given the current and past states
+of the network as specified in eq. <a class="reference internal" href="#equation-eq-i-ode">(5)</a>. As a discretized
+version of eq. <a class="reference internal" href="#equation-eq-i-ode">(5)</a> please use the following:</p>
+<div class="math">
+<p><img src="_images/math/516aae4e4a90c8d0ee4b4f8282068bb00447ad7a.png" alt="I_i[n+1] = \gamma I_i[n] + H_i[n]"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>I</strong> – The post-synaptic current <img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/>.</li>
+<li><strong>H</strong> – The auxiliary variable for the alpha-shaped post-synaptic
+currents <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The updated post-synaptic current of the neurons in the layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.spiking_layer.SpikingLayer.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/spiking_layer.html#SpikingLayer.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.spiking_layer.SpikingLayer.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the output activation of a spiking layer.</p>
+<p>This method computes the membrane potential and spiking activity of the
+current layer across all time steps given the pre-synaptic spiking
+activity. For this, the state of the layer is
+updated time step by time step; i.e. the post-synaptic current,
+membrane potential and spiking activity are computed in each time step.
+The states are updated based on the computational graph provided in
+Figure 2 in <a class="reference external" href="https://arxiv.org/pdf/1901.09948.pdf">Neftci et al. (2019)</a>, and when filling in the missing
+lines you should pay extra attention and make sure that the values
+you provide to the update methods belong to the right time step
+according to this computational graph.</p>
+<p>Note that since we deal with alpha-shaped post-synaptic currents here
+(and not exponential decay post-synaptic currents), the computational
+graph has an extra variable <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/> that is updated based on the
+inputs in the previous time step, and its own value in the previous
+time step. <img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/> in a given time step is then used to compute the
+post-synaptic current <img class="math" src="_images/math/d2ed2630e579be280a30b6646f4d706103c337ce.png" alt="I"/> in the following time step. Notice that
+for this extra equation, the <code class="xref py py-class docutils literal notranslate"><span class="pre">lib.SpikingLayer</span></code> class has an
+attribute <img class="math" src="_images/math/4efb887d0d27f3caa83f8913c0426dc73021d3e0.png" alt="phi"/> that governs the decay rate of the variable
+<img class="math" src="_images/math/44d4c3f22452acebfb3ac644e23508b67500be90.png" alt="H"/>. For further discussion see <a class="reference internal" href="#module-lib.spiking_layer" title="lib.spiking_layer"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>X</strong> – The spiking activity of the previous layer.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Tuple containing:<ul class="simple">
+<li><strong>U</strong>: The membrane potential for all neurons of the layer in all
+time steps.</li>
+<li><strong>S</strong>: The spiking activity of all neurons of the layer in all
+time steps.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)">tuple</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<span class="target" id="module-lib.utils"></span><div class="section" id="a-collection-of-helper-functions-lib-utils">
+<h2><a class="toc-backref" href="#id6">A collection of helper functions (<a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a>)</a><a class="headerlink" href="#a-collection-of-helper-functions-lib-utils" title="Permalink to this headline">¶</a></h2>
+<p>The module <a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a> contains several general purpose utilities and
+helper functions.</p>
+<p>The functions <code class="xref py py-meth docutils literal notranslate"><span class="pre">utils.current2firing_time()</span></code> and
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">utils.sparse_data_generator()</span></code> are taken directly from Friedemann Zenke’s
+Spytorch tutorial:</p>
+<blockquote>
+<div><a class="reference external" href="https://github.com/fzenke/spytorch/">https://github.com/fzenke/spytorch/</a></div></blockquote>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils</span></code></a></td>
+<td>A collection of helper functions (<a class="reference internal" href="#module-lib.utils" title="lib.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">lib.utils</span></code></a>)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.utils.current2firing_time" title="lib.utils.current2firing_time"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.current2firing_time</span></code></a>(x[,&nbsp;tau,&nbsp;thr,&nbsp;…])</td>
+<td>Converts MNIST pixel values to latency-coded spikes.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#lib.utils.sparse_data_generator" title="lib.utils.sparse_data_generator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.sparse_data_generator</span></code></a>(x,&nbsp;y,&nbsp;args)</td>
+<td>A generator that takes mini-batches in analog format and transforms them to spike trains as sparse tensors.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#lib.utils.plot_weight_hist" title="lib.utils.plot_weight_hist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lib.utils.plot_weight_hist</span></code></a>(parameters,&nbsp;…)</td>
+<td>Plot histogram of the initial and trained weights in each layer.</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="lib.utils.current2firing_time">
+<code class="descclassname">lib.utils.</code><code class="descname">current2firing_time</code><span class="sig-paren">(</span><em>x</em>, <em>tau=20</em>, <em>thr=0.2</em>, <em>tmax=1.0</em>, <em>epsilon=1e-07</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#current2firing_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.current2firing_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts MNIST pixel values to latency-coded spikes.</p>
+<p>Computes first firing time latency for a current input x assuming the
+charge time of a current based LIF neuron. Images to spikes using a spike
+latency code, i.e. the higher the input intensity, the earlier the first
+spike will be fired.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – The “current” values for each pixel in each image.
+Shape: (samples, 784)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Keyword Arguments:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body"><ul class="first simple">
+<li><strong>tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – The membrane time constant of the LIF neuron to be charged</li>
+<li><strong>thr</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – The firing threshold value</li>
+<li><strong>tmax</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – The maximum time returned</li>
+<li><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – A generic (small) epsilon &gt; 0</li>
+</ul>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>Time to first spike for each “current” x.</dt>
+<dd><p class="first last">Shape: (samples, 784)</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">T (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.sparse_data_generator">
+<code class="descclassname">lib.utils.</code><code class="descname">sparse_data_generator</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>args</em>, <em>shuffle=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#sparse_data_generator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.sparse_data_generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator that takes mini-batches in analog format and transforms
+them to spike trains as sparse tensors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> – The data ( sample x event x 2 ) the last dim holds (time,neuron)
+tuples, (samples, 28 x 28)</li>
+<li><strong>y</strong> – The labels (samples,)</li>
+<li><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.8)"><em>argparse.Namespace</em></a>) – The command-line arguments.</li>
+<li><strong>shuffle</strong> (<em>boolean</em>) – Whether batches should be shuffled.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Yields:</th><td class="field-body"><p class="first"><em>(tuple)</em> –</p>
+<p>Tuple containing:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li><strong>X_batch</strong>: Spiking mini-batch.</li>
+<li><strong>y_batch</strong>: Target classes for the current mini-batch.</li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.load_MNIST">
+<code class="descclassname">lib.utils.</code><code class="descname">load_MNIST</code><span class="sig-paren">(</span><em>path='data/'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#load_MNIST"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.load_MNIST" title="Permalink to this definition">¶</a></dt>
+<dd><p>(Down)Loads data for a classification task on MNIST images.</p>
+<p>The Torchvision library provides methods to load the MNIST dataset from a
+local directory if the data have been downloaded previously, or to
+download and load the data if they cannot be found locally.</p>
+<p>The data are split into train and test sets and are preprocessed to convert
+the pixel values from [0,255] to [0,1]. Each 28 x 28 image is flattened
+to a 784 vector.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The path to the local MNIST dataset or the directory into
+which the MNIST dataset will be downloaded.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Tuple containing:<blockquote>
+<div><ul class="simple">
+<li><strong>train_x</strong>: Training set images.</li>
+<li><strong>test_x</strong>:  Test set images.</li>
+<li><strong>train_y</strong>: Training set labels.</li>
+<li><strong>test_y</strong>:  Test set labels.</li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.8)">tuple</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.utils.plot_weight_hist">
+<code class="descclassname">lib.utils.</code><code class="descname">plot_weight_hist</code><span class="sig-paren">(</span><em>parameters</em>, <em>initial_weights</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lib/utils.html#plot_weight_hist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.utils.plot_weight_hist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot histogram of the initial and trained weights in each layer.</p>
+<p>For each layer, a different subplot with overlapping weight distributions
+before and after training will be shown.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>parameters</strong> – The set of weights after training.</li>
+<li><strong>initial_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – The set of initial weights.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tutorial 5.2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#controller-for-simulations-main">Controller for simulations (<code class="docutils literal notranslate"><span class="pre">main</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-of-a-spiking-multilayer-perceptron-lib-snn">Implementation of a spiking multilayer perceptron (<code class="docutils literal notranslate"><span class="pre">lib.snn</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementing-training-and-evaluating-a-spiking-neural-network-lib-spiking-functions">Implementing, training, and evaluating a spiking neural network (<code class="docutils literal notranslate"><span class="pre">lib.spiking_functions</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-spiking-layer-module-that-maintains-its-own-parameters-lib-spiking-layer">A spiking layer module that maintains its own parameters (<code class="docutils literal notranslate"><span class="pre">lib.spiking_layer</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-collection-of-helper-functions-lib-utils">A collection of helper functions (<code class="docutils literal notranslate"><span class="pre">lib.utils</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Learning in deep artificial and biological neuronal networks</a></li>
+      <li>Next: <a href="tests.html" title="next chapter">Testing</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

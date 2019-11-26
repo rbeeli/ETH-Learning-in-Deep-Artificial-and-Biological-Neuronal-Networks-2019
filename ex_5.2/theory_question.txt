@@ -1,0 +1,27 @@
+Tutorial 5.2 Theory Question
+
+
+Name:           Rino Beeli
+Student ID:     15-709-371 (UZH external)
+Email:          rbeeli@student.ethz.ch
+
+
+Question: Discuss the biological and non-biological aspects of the spiking neural network and the
+training scheme implemented in this exercise.
+
+You may wish to refer to Neftci et al. (2019)[2] or Zenke et al. (2017)[3] for inspiration.
+
+[2] Neftci et al. (2019): https://arxiv.org/abs/1901.09948
+[3] Zenke et al. (2017): https://arxiv.org/abs/1705.11146
+
+You could think about:
+ ● Neuron model
+ ● Spiking function
+ ● Architecture
+ ● Task: classification, supervision
+ ● Backpropagation
+ ● How biology might implement it, if it can
+ ● Links to previous lectures
+
+Answer: --- **Remark** - Answer should be less than 200 words. ---
+

@@ -1,0 +1,517 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>lib.spiking_functions &#8212; Tutorial 5.2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.spiking_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Maria Cervera, Lee Sharkey</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementing, training, and evaluating a spiking neural network (:mod:`lib.spiking_functions`)</span>
+<span class="sd">--------------------------------------------------------------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.spiking_functions` contains custom functions that should</span>
+<span class="sd">be used for running, training and evaluating spiking networks. Specifically,</span>
+<span class="sd">you must implement the surrogate gradient for the spiking nonlinearity, as well </span>
+<span class="sd">as the functions computing the loss and the accuracy on the spike trains of the </span>
+<span class="sd">output neurons. You will also implement a function that calculates a </span>
+<span class="sd">regularisation loss term on the spiking activities.</span>
+
+<span class="sd">New functionality can be added to</span>
+<span class="sd">autograd_ by creating a subclass of class :class:`torch.autograd.Function`.</span>
+<span class="sd">If you have pasted your answer to :meth:`lib.spiking_functions.spike_function`</span>
+<span class="sd">from last week, then the forward pass</span>
+<span class="sd">:meth:`torch.autograd.Function.forward` is already implemented for you in</span>
+<span class="sd">:meth:`lib.spiking_functions.SurrogateSpike.forward`.</span>
+
+<span class="sd">As discussed in the lecture and in the exercise session, we will use the</span>
+<span class="sd">derivative of the scaled logistic function for the surrogate gradient. The</span>
+<span class="sd">code for the backward pass :meth:`torch.autograd.Function.backward`,</span>
+<span class="sd">with normalisation and scaling, is already</span>
+<span class="sd">implemented for you in :meth:`lib.spiking_functions.SurrogateSpike.forward`.</span>
+<span class="sd">What is missing is the function that calculates the surrogate</span>
+<span class="sd">gradient: :meth:`lib.spiking_functions.derivative_logistic`. You must derive</span>
+<span class="sd">and implement the gradient of the scaled logistic function i.e.</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \frac{d}{dx} \left[\frac{1}{1 + \exp{(-kx)}}\right]</span>
+
+<span class="sd">Be careful to include the :math:`k` in your derivation.</span>
+
+<span class="sd">You will also implement the loss function</span>
+<span class="sd">:meth:`lib.spiking_functions.loss_on_spikes`, the accuracy function</span>
+<span class="sd">:meth:`lib.spiking_functions.accuracy_on_spikes` and the function that</span>
+<span class="sd">computes the regularisation loss term</span>
+<span class="sd">:meth:`lib.spiking_functions.spike_regularizer`.</span>
+
+
+<span class="sd">.. autosummary::</span>
+<span class="sd">    lib.spiking_functions.logistic</span>
+<span class="sd">    lib.spiking_functions.derivative_logistic</span>
+<span class="sd">    lib.spiking_functions.spike_function</span>
+<span class="sd">    lib.spiking_functions.SurrogateSpike</span>
+<span class="sd">    lib.spiking_functions.SurrogateSpike.forward</span>
+<span class="sd">    lib.spiking_functions.SurrogateSpike.backward</span>
+<span class="sd">    lib.spiking_functions.loss_on_spikes</span>
+<span class="sd">    lib.spiking_functions.accuracy_on_spikes</span>
+<span class="sd">    lib.spiking_functions.spike_regularizer</span>
+
+
+<span class="sd">.. _autograd:</span>
+<span class="sd">    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html</span>
+
+<span class="sd">.. math:</span>
+<span class="sd">    \usepackage{dsfont}</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Please fill out identification details in</span>
+<span class="c1">#   lib/spiking_layer.py</span>
+<span class="c1">#   lib/spiking_functions.py</span>
+<span class="c1">#   theory_question.txt</span>
+
+<span class="c1"># Student name :</span>
+<span class="c1"># Student ID   :</span>
+<span class="c1"># Email address:</span>
+
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+
+<span class="n">cross_entropy_loss</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="logistic"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.logistic">[docs]</a><span class="k">def</span> <span class="nf">logistic</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;A scaled logistic function with maximal value of 1, midpoint at</span>
+<span class="sd">    :math:`x=0`, and steepness determined by the scale argument :math:`k`.</span>
+
+<span class="sd">    Mathematically, this family of functions is given by:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \sigma(x) := \frac{1}{1 + \exp{(-kx)}}</span>
+<span class="sd">        :label: eq-logistic</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.tensor): Input on which to compute the function.</span>
+<span class="sd">        k (float): Steepness of the logistic curve.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">       (torch.tensor): The logistic value of x.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">k</span><span class="o">*</span><span class="n">x</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="derivative_logistic"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.derivative_logistic">[docs]</a><span class="k">def</span> <span class="nf">derivative_logistic</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;The analytic derivative of the scaled logistic function.</span>
+
+<span class="sd">    This function implements the derivative of </span>
+<span class="sd">    :meth:`lib.spiking_functions.logistic` with respect to the input :math:`x`,</span>
+<span class="sd">    i.e.</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \frac{d}{dx} \left[\frac{1}{1 + \exp{(-kx)}}\right]</span>
+
+<span class="sd">    Please compute the derivative and implement it. Note that you can call</span>
+<span class="sd">    :meth:`lib.spiking_functions.logistic` within this function if you want to.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">        x (torch.tensor): Input on which to compute the derivative.</span>
+<span class="sd">        k (float): Steepness of the curve.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">       (torch.tensor): The derivative of the logistic on x.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># deriv = ...</span>
+
+    <span class="c1"># return deriv</span>
+
+
+<div class="viewcode-block" id="spike_function"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.spike_function">[docs]</a><span class="k">def</span> <span class="nf">spike_function</span><span class="p">(</span><span class="n">D</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Spike non-linearity function.</span>
+
+<span class="sd">    This function takes :math:`D = ( U - U_{threshold} )` as input,</span>
+<span class="sd">    which is the amount by which the membrane potential of neurons is above the</span>
+<span class="sd">    membrane threshold :math:`U_{threshold} \in \mathbb{R}`. There are :math:`M`</span>
+<span class="sd">    neurons in a layer and minibatch size is :math:`B`, hence</span>
+<span class="sd">    :math:`D \in \mathbb{R}^{B \times M}`.</span>
+
+<span class="sd">    This function computes the spiking nonlinearity, which should</span>
+<span class="sd">    produce a spike when a neuron&#39;s membrane potential exceeds or is equal</span>
+<span class="sd">    to the membrane threshold potential i.e. when :math:`U_i - U_{threshold}</span>
+<span class="sd">    \geq 0`.</span>
+
+<span class="sd">    The spiking nonlinearity we use here is the simple Heaviside step function,</span>
+<span class="sd">    :math:`\Theta (\cdot)`, defined as</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \Theta(x) :=</span>
+<span class="sd">        \begin{cases}</span>
+<span class="sd">            0, &amp; x &lt; 0 \\</span>
+<span class="sd">            1, &amp; x \geq 0</span>
+<span class="sd">        \end{cases}</span>
+<span class="sd">        :label: eq-heaviside</span>
+
+<span class="sd">    Last week, you coded the :meth:`spike_function` method to</span>
+<span class="sd">    take :math:`D = ( U - U_{threshold} ) \in \mathbb{R}^{B \times M}` as </span>
+<span class="sd">    input and compute :math:`\Theta(D)` elementwise for each entry in the </span>
+<span class="sd">    matrix. This is the same function. You should paste the code you wrote last</span>
+<span class="sd">    week for that function in this week&#39;s function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        D: A matrix of shape :math:`B \times M` representing</span>
+<span class="sd">            :math:`U - U_{threshold}`, the difference between the membrane</span>
+<span class="sd">            potential of each of the :math:`M` neurons in each of the</span>
+<span class="sd">            :math:`B` images of the mini-batch.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The output spikes, obtained by applying :math:`\Theta (\cdot)`</span>
+<span class="sd">        (defined in eq. :eq:`eq-heaviside`) elementwise to D.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Paste your code from last week here</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># S = ...</span>
+    <span class="c1"># return S</span>
+
+
+<div class="viewcode-block" id="SurrogateSpike"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.SurrogateSpike">[docs]</a><span class="k">class</span> <span class="nc">SurrogateSpike</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;A class to house the functions for the forward and backward passes of a </span>
+<span class="sd">    spiking nonlinearity.</span>
+
+<span class="sd">    Because this class is an instance of :class:`torch.autograd.Function`,</span>
+<span class="sd">    we are able to use all of PyTorch&#39;s autograd functionality. It has two</span>
+<span class="sd">    components: the forward function and the backward function.</span>
+
+<span class="sd">    If you have pasted your answer to</span>
+<span class="sd">    :meth:`lib.spiking_functions.spike_function`</span>
+<span class="sd">    from last week, then the forward pass</span>
+<span class="sd">    :meth:`torch.autograd.Function.forward` is already implemented for you.</span>
+
+<span class="sd">    For the backward pass, typically we take the partial derivative of the</span>
+<span class="sd">    forward nonlinearity with respect to each element of the inputs that</span>
+<span class="sd">    is tagged as requiring the gradient. However, the gradient</span>
+<span class="sd">    of the step function (and many other spiking non-linearities)</span>
+<span class="sd">    is zero everywhere except at 0 where it is ill-defined. Therefore it is</span>
+<span class="sd">    necessary to use the gradient of a different function for the backward</span>
+<span class="sd">    pass. This is the &#39;surrogate gradient&#39;.</span>
+
+<span class="sd">    Here we will take the derivative of the logistic function with respect to </span>
+<span class="sd">    its input as the surrogate gradient, as implemented in </span>
+<span class="sd">    :meth:`lib.spiking_functions.derivative_logistic`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        scale (float): The scale parameter that controls the steepness of the</span>
+<span class="sd">            surrogate gradient.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scale</span> <span class="o">=</span> <span class="mf">20.</span>
+
+<div class="viewcode-block" id="SurrogateSpike.forward"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.SurrogateSpike.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">D</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the output of a spiking layer.</span>
+
+<span class="sd">        In the forward pass we compute a step function of the input Tensor</span>
+<span class="sd">        and return it. This directly applies your :meth:`spike_function()`</span>
+<span class="sd">        implemented already for last week&#39;s tutorial.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: A context. Should be used to store activations that are needed</span>
+<span class="sd">                in the backward pass. To achieve this we use the</span>
+<span class="sd">                ctx.save_for_backward method.</span>
+<span class="sd">            D: A matrix of shape :math:`B \times M` representing</span>
+<span class="sd">                :math:`U_{b,i} - U_{threshold}`, the difference between the </span>
+<span class="sd">                membrane potential of each of the :math:`M` neurons in each of </span>
+<span class="sd">                the :math:`B` mini-batches.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output spikes, obtained by applying :math:`\Theta` (defined in</span>
+<span class="sd">            eq. :eq:`eq-heaviside`) elementwise to D.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">spike_function</span><span class="p">(</span><span class="n">D</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SurrogateSpike.backward"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.SurrogateSpike.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the surrogate gradient of the spiking layer.</span>
+
+<span class="sd">        In the backward pass we receive a Tensor D we need to compute the</span>
+<span class="sd">        surrogate gradient of the loss with respect to the input, which</span>
+<span class="sd">        represents the difference between the membrane potential of the layer</span>
+<span class="sd">        and the membrane threshold:</span>
+<span class="sd">        :math:`D = ( U_{i} - U_{threshold} ) \in \mathbb{R}^{B \times M}`.</span>
+<span class="sd">        Here we use the partial derivative of the scaled logistic function</span>
+<span class="sd">        with respect to all input tensors that are flagged to require</span>
+<span class="sd">        gradients.</span>
+
+<span class="sd">        The derivative of the logistic function peaks at 0.25. We found that it</span>
+<span class="sd">        works well to normalise the gradient by multiplying the gradient by</span>
+<span class="sd">        4. In order to control the steepness of the surrogate gradient around</span>
+<span class="sd">        the spike, we include the parameter ``SurrogateSpike.scale``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: A context.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            grad (torch.tensor): The gradient of the loss with respect to the</span>
+<span class="sd">                input.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">D</span><span class="p">,</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+        <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_output</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">normalizing_constant</span> <span class="o">=</span> <span class="mf">4.</span> <span class="o">/</span> <span class="n">SurrogateSpike</span><span class="o">.</span><span class="n">scale</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">grad_input</span><span class="o">*</span><span class="n">normalizing_constant</span> <span class="o">*</span> \
+                    <span class="n">derivative_logistic</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">SurrogateSpike</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">grad</span></div></div>
+
+
+<div class="viewcode-block" id="loss_on_spikes"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.loss_on_spikes">[docs]</a><span class="k">def</span> <span class="nf">loss_on_spikes</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes cross entropy loss based on the spike trains of the output </span>
+<span class="sd">    units.</span>
+
+<span class="sd">    Takes a set of output spikes in form of a tensor</span>
+<span class="sd">    :math:`S \in \mathbb{R}^{B \times t_{max} \times M}`,</span>
+<span class="sd">    where :math:`B` denotes the size of the mini-batch, :math:`t_{max}` the </span>
+<span class="sd">    number of timesteps during which each mini-batch is presented, and :math:`M` </span>
+<span class="sd">    the number of output units. Additionally, it takes a set of target labels</span>
+<span class="sd">    :math:`T \in \mathbb{N}^{B}`, indicating the true class of each image</span>
+<span class="sd">    :math:`b` in the current mini-batch.</span>
+
+<span class="sd">    The loss calculated here is the cross-entropy loss applied to the</span>
+<span class="sd">    total number of spikes over all timesteps for each output neuron for each</span>
+<span class="sd">    image.</span>
+
+<span class="sd">    It is calculated as follows:</span>
+
+<span class="sd">    Let :math:`Z_{b,i} = \sum_t S_{b,t,i}` be the total number of spikes over</span>
+<span class="sd">    all timesteps for each output neuron :math:`i` for each image :math:`b`.</span>
+<span class="sd">    Then calculate the cross entropy loss:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        CELoss(Z, T) = \frac{1}{B} \sum_{b=1}^{B} - Z_{b, T_b} +</span>
+<span class="sd">        \log \left( \sum_j \exp ( Z_{b, j} ) \right)</span>
+
+<span class="sd">    You may wish to refer to the pytorch documentation for its native</span>
+<span class="sd">    :class:`torch.nn.CrossEntropyLoss` class and use it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        S: The output spike trains, i.e., the matrix :math:`S`.</span>
+<span class="sd">        T: The target activations, i.e., the matrix :math:`T`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The cross entropy loss on the sum of spikes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># loss = ...</span>
+
+    <span class="c1"># return loss</span>
+
+
+<div class="viewcode-block" id="accuracy_on_spikes"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.accuracy_on_spikes">[docs]</a><span class="k">def</span> <span class="nf">accuracy_on_spikes</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes classification accuracy of the spiking network based on the</span>
+<span class="sd">    spike trains of the output units.</span>
+
+<span class="sd">    Takes a set of output spikes in form of a matrix</span>
+<span class="sd">    :math:`S \in \mathbb{R}^{B \times t_{max} \times M}`,</span>
+<span class="sd">    where :math:`B` denotes the size of</span>
+<span class="sd">    the mini-batch, :math:`t_{max}` the number of timesteps during which each</span>
+<span class="sd">    mini-batch is presented, and :math:`M` the number of output units. </span>
+<span class="sd">    Additionally, this ``Function`` requires a set of targets</span>
+<span class="sd">    :math:`T \in \mathbb{Z}^{B}`, indicating the correct classes of the current</span>
+<span class="sd">    mini-batch.</span>
+
+<span class="sd">    Using these two arguments, it finds the output neurons that have the highest</span>
+<span class="sd">    membrane spiking rate for each image, and compares these with the target </span>
+<span class="sd">    labels to compute the accuracy.</span>
+
+<span class="sd">    Letting :math:`Z_{b,i} = \sum_t S_{b,t,i}` be the summed number of spikes</span>
+<span class="sd">    across all timesteps for each output neuron :math:`i` for each image</span>
+<span class="sd">    :math:`b`,</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        Accuracy = \frac{1}{B} \sum_{b=1}^{B} 1[ \arg\max_{i} Z_{b,:} = T_b]</span>
+
+<span class="sd">    where :math:`1[\cdot]` is the indicator function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        S: The output spike trains, i.e., the matrix :math:`S`.</span>
+<span class="sd">        T: The target classes, i.e., the vector :math:`T`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The classification accuracy of the current batch.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># acc = ...</span>
+
+    <span class="c1"># return acc</span>
+
+
+<div class="viewcode-block" id="spike_regularizer"><a class="viewcode-back" href="../../modules.html#lib.spiking_functions.spike_regularizer">[docs]</a><span class="k">def</span> <span class="nf">spike_regularizer</span><span class="p">(</span><span class="n">spikes_list</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculate the regularisation loss term for the spiking activity.</span>
+
+<span class="sd">    Biological neurons usually do not fire at rates greater than around 20Hz.</span>
+<span class="sd">    In order to regularise our networks so that the neurons do not fire at</span>
+<span class="sd">    grossly unphysiological rates, we calculate an additional term to add to</span>
+<span class="sd">    the training loss.</span>
+
+<span class="sd">    Many different types of regularisation could work. Here you should implement</span>
+<span class="sd">    a regularisation term that has two components:</span>
+
+<span class="sd">    The first component sums all the spikes over all hidden layers, batch</span>
+<span class="sd">    elements, timesteps and neurons, i.e.</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \sum_{l} \sum_{i=0}^{M_l} \sum_{b, t} S_{l,b,t,i}</span>
+
+<span class="sd">    where :math:`M_l` is the number of neurons in the hidden layer :math:`l`. </span>
+<span class="sd">    This corresponds to an L1 regularization on the total number of spikes at </span>
+<span class="sd">    the population, thus inducing sparsity at a population level.</span>
+
+<span class="sd">    The second component regularizes the firing of individual neurons.</span>
+<span class="sd">    It takes the mean squared sum of spikes for individual neurons (summed</span>
+<span class="sd">    across batch elements and timestes), summed over all hidden layers, i.e.</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \sum_l \frac{1}{M_l} \sum_{i=0}^{M_l} \Big(\sum_{b,t} S_{l,b,t,i}\Big)^2</span>
+
+<span class="sd">    This corresponds to an L2 norm in the firing rate of individual neurons,</span>
+<span class="sd">    thus inducing neurons to have low firing rates.</span>
+
+<span class="sd">    Finally, the regularisation loss term returned by this function consists of </span>
+<span class="sd">    the sum of these two components.</span>
+
+<span class="sd">    Please note that the inputs to this function only correspond to hidden </span>
+<span class="sd">    spiking activity. Therefore you do not have to exclude any</span>
+<span class="sd">    layers within this function because it is already done for you.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        spikes_list (list): a list of tensors of spikes, where each element</span>
+<span class="sd">            corresponds to the spiking activity of a hidden layer and has shape </span>
+<span class="sd">            :math:`B` (batch size) :math:`\times t_{max}` (number of timesteps </span>
+<span class="sd">            :math:`\times M_l` (number of hidden units in that layer).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The regularisation loss term.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+    <span class="c1"># reg_loss = ...</span>
+
+    <span class="c1"># return reg_loss</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 5.2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

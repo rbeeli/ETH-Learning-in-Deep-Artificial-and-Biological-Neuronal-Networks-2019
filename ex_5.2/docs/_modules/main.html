@@ -1,0 +1,364 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>main &#8212; Tutorial 5.2  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for main</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Controller for simulations (:mod:`main`)</span>
+<span class="sd">----------------------------------------</span>
+
+<span class="sd">The module :mod:`main` is an executable script that controls the simulations</span>
+<span class="sd">(i.e., the training and testing of MNIST digit classification tasks).</span>
+
+<span class="sd">For more usage information, check out:</span>
+
+<span class="sd">.. code-block:: console</span>
+
+<span class="sd">  $ python3 main.py --help</span>
+
+<span class="sd">.. autosummary::</span>
+<span class="sd">    main.train</span>
+<span class="sd">    main.test</span>
+<span class="sd">    main.run</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="kn">import</span> <span class="nn">lib.spiking_functions</span> <span class="k">as</span> <span class="nn">sf</span>
+<span class="kn">from</span> <span class="nn">lib.snn</span> <span class="k">import</span> <span class="n">SNN</span>
+<span class="kn">from</span> <span class="nn">lib</span> <span class="k">import</span> <span class="n">utils</span>
+
+<div class="viewcode-block" id="train"><a class="viewcode-back" href="../modules.html#main.train">[docs]</a><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">net</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Trains the given network on the MNIST dataset.</span>
+
+<span class="sd">    The :mod:`main.train` method takes data (x, y) and a spiking neural net,</span>
+<span class="sd">    puts the net in training mode, and sets up the optimiser. Then, for each</span>
+<span class="sd">    epoch, it runs through the whole MNIST dataset once, updating the weights</span>
+<span class="sd">    once every mini-batch, after the images in this mini-batch have been</span>
+<span class="sd">    converted to spike trains. </span>
+<span class="sd">    Note, the ``Function``</span>
+<span class="sd">    :func:`lib.spiking_functions.loss_on_spikes` is used to compute</span>
+<span class="sd">    the loss.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        args (argparse.Namespace): The command-line arguments.</span>
+<span class="sd">        device (torch.device): The PyTorch device to be used.</span>
+<span class="sd">        x (torch.Tensor): The training inputs.</span>
+<span class="sd">        y (torch.Tensor): The training targets.</span>
+<span class="sd">        net (lib.snn.SNN): The spiking neural network.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Training network ...&#39;</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># Puts the SNN in training mode</span>
+
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span> <span class="n">betas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span><span class="mf">0.99</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">epochs</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="ow">in</span> <span class="n">utils</span><span class="o">.</span><span class="n">sparse_data_generator</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">targets</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">voltage</span><span class="p">,</span> <span class="n">spikes</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">to_dense</span><span class="p">())</span>
+
+            <span class="n">output_voltage</span> <span class="o">=</span> <span class="n">voltage</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">output_spikes</span>  <span class="o">=</span> <span class="n">spikes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">loss_on_spikes</span><span class="p">(</span><span class="n">output_spikes</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span> 
+
+            <span class="c1"># Compute spike regularization on hidden layers</span>
+            <span class="n">loss</span> <span class="o">+=</span> <span class="n">args</span><span class="o">.</span><span class="n">spike_reg</span><span class="o">*</span><span class="n">sf</span><span class="o">.</span><span class="n">spike_regularizer</span><span class="p">(</span><span class="n">spikes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Epoch </span><span class="si">%i</span><span class="s1"> -- loss = </span><span class="si">%.3f</span><span class="s1">.&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">loss</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Training network ... Done&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="test"><a class="viewcode-back" href="../modules.html#main.test">[docs]</a><span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">net</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Tests a trained network by computing the classification accuracy on the </span>
+<span class="sd">    test set.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of function :func:`train`.</span>
+<span class="sd">        x (torch.Tensor): The testing inputs.</span>
+<span class="sd">        y (torch.Tensor): The testing targets.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The classification accuracy for the</span>
+<span class="sd">        test data (x, y) when using the network ``net``.</span>
+<span class="sd">        Note, the ``Function``</span>
+<span class="sd">        :func:`lib.spiking_functions.accuracy_on_spikes` is used to compute</span>
+<span class="sd">        the accuracy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">net</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">accu</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="ow">in</span> <span class="n">utils</span><span class="o">.</span><span class="n">sparse_data_generator</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">targets</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">num_samples</span> <span class="o">+=</span> <span class="n">batch_size</span>
+
+            <span class="n">voltage</span><span class="p">,</span> <span class="n">spikes</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">to_dense</span><span class="p">())</span>
+
+            <span class="n">output_voltage</span> <span class="o">=</span> <span class="n">voltage</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">output_spikes</span> <span class="o">=</span> <span class="n">spikes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">batch_accu</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">accuracy_on_spikes</span><span class="p">(</span><span class="n">output_spikes</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+            <span class="n">accu</span> <span class="o">+=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">batch_accu</span>
+
+        <span class="n">accu</span> <span class="o">/=</span> <span class="n">num_samples</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Test accuracy: </span><span class="si">%.2f%%</span><span class="s1">.&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">accu</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">accu</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="run"><a class="viewcode-back" href="../modules.html#main.run">[docs]</a><span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Runs the script.</span>
+
+<span class="sd">    The :mod:`main.run` method performs the following actions:</span>
+
+<span class="sd">    - Parses command-line arguments</span>
+<span class="sd">    - Sets random seeds to ensure deterministic computation</span>
+<span class="sd">    - Loads MNIST dataset</span>
+<span class="sd">    - Initiates training process</span>
+<span class="sd">    - Tests accuracy of final network</span>
+<span class="sd">    - Plots weight histograms if required</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">### Parse CLI arguments.</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;MNIST classification with &#39;</span> <span class="o">+</span>
+                                     <span class="s1">&#39;spiking neural networks.&#39;</span><span class="p">)</span>
+
+    <span class="n">dgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Neuronal dynamics options&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tau_mem&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">10e-3</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Membrane time constant (in s). Default: &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;</span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tau_syn&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">12e-3</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Synaptic time constant (in s). Default: &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;</span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tau_rise&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Synaptic rise time constant (in s). Default: &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;</span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--u_rest&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Resting membrane potential (in volts). &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--u_threshold&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Threshold voltage for spike generation (in &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;volts). Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--R&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Membrane resistance (in ohms). &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="n">sgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Spiking options&#39;</span><span class="p">)</span>
+    <span class="n">sgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--spike_reg&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Strength of the spike rate regularization. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="n">tgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Training options&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epochs&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of training epochs. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--batch_size&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training batch size. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Learning rate of optimizer. Default: &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;</span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="n">ngroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Network options&#39;</span><span class="p">)</span>
+    <span class="n">ngroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--num_hidden&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of hidden layers in the network. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">ngroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--size_hidden&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of units in each hidden layer of the &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;network. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">ngroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--weight_scale&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Scale for the initialization of the weights. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="n">mgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Miscellaneous options&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--delta_t&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Time step size (in s). Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--t_max&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of time steps used for each sample. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_cuda&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag to enable GPU usage.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--random_seed&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Random seed. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--plot_weight_hist&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Whether histograms of the weights before and &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;after learning should be plotted.&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1">### Ensure deterministic computation.</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed_all</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+    <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+
+    <span class="c1"># Ensure that runs are reproducible even on GPU. Note, this slows down</span>
+    <span class="c1"># training!</span>
+    <span class="c1"># https://pytorch.org/docs/stable/notes/randomness.html</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">deterministic</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">benchmark</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">use_cuda</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">use_cuda</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">use_cuda</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using cuda: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">use_cuda</span><span class="p">))</span>
+
+    <span class="c1">### Generate datasets and data handlers.</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;### Learning to classify MNIST digits with a spiking network ###&#39;</span><span class="p">)</span>
+    <span class="n">n_in</span> <span class="o">=</span> <span class="mi">784</span>
+    <span class="n">n_out</span> <span class="o">=</span> <span class="mi">10</span>
+
+    <span class="n">train_x</span><span class="p">,</span> <span class="n">test_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">test_y</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_MNIST</span><span class="p">()</span>
+
+    <span class="c1">### Generate network.</span>
+    <span class="n">n_hidden</span> <span class="o">=</span> <span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">size_hidden</span><span class="p">]</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">num_hidden</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">SNN</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">n_in</span><span class="o">=</span><span class="n">n_in</span><span class="p">,</span> <span class="n">n_out</span><span class="o">=</span><span class="n">n_out</span><span class="p">,</span> <span class="n">n_hidden</span><span class="o">=</span><span class="n">n_hidden</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1">### Store initial weights.</span>
+    <span class="n">initial_weights</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">weights</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+        <span class="n">initial_weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weights</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+
+    <span class="c1">### Train network.</span>
+    <span class="n">train</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">net</span><span class="p">)</span>
+
+    <span class="c1">### Test network.</span>
+    <span class="n">accuracy</span> <span class="o">=</span> <span class="n">test</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">test_x</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">net</span><span class="p">)</span>
+
+    <span class="c1">### Plot weight histograms if asked to.</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">plot_weight_hist</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">plot_weight_hist</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">initial_weights</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">run</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Tutorial 5.2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

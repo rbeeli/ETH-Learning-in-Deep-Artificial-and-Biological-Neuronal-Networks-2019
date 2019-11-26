@@ -1,0 +1,42 @@
+.. _api-reference-label:
+
+API
+***
+
+.. contents::
+
+The API describes all functionalities implemented for this exercise. Of particular interest is the :mod:`main` script, which can be used to validate an implementation (see :ref:`testing <tests-reference-label>` for how to properly verify your implementation).
+
+The modules :mod:`lib.spiking_functions` and :mod:`lib.spiking_layer` contain the missing functionalities that have to be implemented. There is a new theory question in week 2. Don't forget to answer the theory question in the file ``theory_question.txt`` and submit the completed .txt file with your code. 
+
+Throughout, the following notation is used:
+    - :math:`U` : The membrane potential.
+    - :math:`I` : The post-synaptic current.
+    - :math:`S` : The spiking activity.
+
+.. automodule:: main
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: lib.snn
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: lib.spiking_functions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+.. automodule:: lib.spiking_layer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: lib.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

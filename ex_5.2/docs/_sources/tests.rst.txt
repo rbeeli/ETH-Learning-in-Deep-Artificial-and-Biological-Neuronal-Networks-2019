@@ -1,0 +1,28 @@
+.. _tests-reference-label:
+
+Testing
+*******
+
+.. contents::
+
+You may execute the provided (public) test cases to check your code from the root directory of the repository using the command:
+
+.. code-block:: console
+
+  $ python3 -m unittest discover -s tests/public -t ./
+  
+You may add the option `-v` to the command above to have more information displayed while testing.
+
+**Note**, the course instructors will have a very similar set of *private* test cases that are used to grade submissions. **Please ensure that all functionalities are implemented as required by the** :ref:`API <api-reference-label>` **and use these test cases only as a sanity-check.**
+
+
+.. automodule:: tests.public.lib.test_spiking_functions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: tests.public.lib.test_spiking_layer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

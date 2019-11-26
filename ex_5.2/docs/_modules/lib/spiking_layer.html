@@ -1,0 +1,433 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>lib.spiking_layer &#8212; Tutorial 5.2  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.spiking_layer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A spiking layer module that maintains its own parameters (:mod:`lib.spiking_layer`)</span>
+<span class="sd">-----------------------------------------------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.spiking_layer` contains the implementation of a single</span>
+<span class="sd">spiking layer. The goal is to utilize the custom</span>
+<span class="sd">``Functions`` implemented in module :mod:`lib.spiking_functions` </span>
+<span class="sd">and to provide a wrapper that takes care of managing the parameters</span>
+<span class="sd">(:math:`W`) of such a layer. The layers defined here will then be used in</span>
+<span class="sd">:mod:`lib.snn` to define a multi-layer spiking network.</span>
+
+<span class="sd">In biological networks, the electrical activity from a pre-synaptic spike leads</span>
+<span class="sd">to changes in the membrane potential of a post-synaptic neuron.</span>
+<span class="sd">In nature, this is a process involving many ions and channels.</span>
+<span class="sd">Here we will use a simplified model: the leaky integrate-and-fire</span>
+<span class="sd">model for spiking neurons. Such models are composed of 1) a description of the</span>
+<span class="sd">dynamics of the membrane potential, and 2) a mechanism for triggering spikes.</span>
+
+<span class="sd">In our implementation, the dynamics of the membrane potential, together with the</span>
+<span class="sd">dynamics of the current and spiking variables, are updated at each timestep</span>
+<span class="sd">based on a discrete implementation of a set of differential equations described</span>
+<span class="sd">below.</span>
+
+<span class="sd">The ODEs that you will implement sequentially update the membrane potentials</span>
+<span class="sd">:math:`U`, the auxiliary variable for the alpha function :math:`H`, and the</span>
+<span class="sd">current :math:`I`. The equation for the membrane potential of neuron :math:`i`</span>
+<span class="sd">is:</span>
+
+<span class="sd">.. math::</span>
+<span class="sd">    \frac{dU_i}{dt} =&amp; - \frac{1}{\tau_{mem}} \left[ (U_i - U_{rest}) - R I_i</span>
+<span class="sd">    \right] + S_i(t) \left( U_{rest} - U_{threshold} \right) \\</span>
+<span class="sd">    :label: eq-U-ODE</span>
+
+<span class="sd">Most commonly, post-synaptic currents resulting from spiking inputs from</span>
+<span class="sd">pre-synaptic neurons are modeled as exponential decay functions, where a spike </span>
+<span class="sd">causes an instantaneous increase in the post-synaptic membrane potential, which</span>
+<span class="sd">then decays exponentially with time i.e. :math:`u(t) = e^{-t}`, assuming the</span>
+<span class="sd">pre-synaptic spike occurs at :math:`t=0`, and a resting potential of 0. </span>
+<span class="sd">A more biologically plausible model is an alpha-shaped post-synaptic current,</span>
+<span class="sd">where the post-synaptic current following a pre-synaptic spike has a finite rise</span>
+<span class="sd">time. In this case we would have :math:`u(t) = te^{-t}`. In this tutorial, we</span>
+<span class="sd">ask you to implement alpha-shaped post-synaptic currents by filling the methods </span>
+<span class="sd">:meth:`lib.spiking_layer.update_H` and :meth:`lib.spiking_layer.update_I`.</span>
+<span class="sd">These are based on the following equations:</span>
+
+<span class="sd">.. math::</span>
+<span class="sd">    \frac{dH_i}{dt} =&amp; - \frac{1}{\tau_{rise}} H_i (t) + \sum_j W_{ij} S_j (t)</span>
+<span class="sd">    :label: eq-H-ODE</span>
+
+<span class="sd">.. math::</span>
+<span class="sd">    \frac{dI_i}{dt} =&amp; - \frac{1}{\tau_{syn}}  I_i (t) + H_i (t)</span>
+<span class="sd">    :label: eq-I-ODE</span>
+
+<span class="sd">All equations were derived during the tutorial session, and can be found in</span>
+<span class="sd">the tutorial slides. Note, however, that only a discrete version for the case</span>
+<span class="sd">of exponential-shaped post-synaptic currents was derived, and not for the</span>
+<span class="sd">alpha-shaped case, which is the one you need here. Therefore you will need to</span>
+<span class="sd">figure out how to turn the ODEs into code appropriately. </span>
+
+
+<span class="sd">.. autosummary::</span>
+
+<span class="sd">    lib.spiking_layer.SpikingLayer</span>
+<span class="sd">    lib.spiking_layer.SpikingLayer.update_U</span>
+<span class="sd">    lib.spiking_layer.SpikingLayer.update_I</span>
+<span class="sd">    lib.spiking_layer.SpikingLayer.update_H</span>
+<span class="sd">    lib.spiking_layer.SpikingLayer.forward</span>
+
+<span class="sd">.. _`Neftci et al. (2019)`:</span>
+<span class="sd">    https://arxiv.org/pdf/1901.09948.pdf</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Please fill out identification details in</span>
+<span class="c1">#   lib/spiking_layer.py</span>
+<span class="c1">#   lib/spiking_functions.py</span>
+<span class="c1">#   theory_question.txt</span>
+
+<span class="c1"># Student name :</span>
+<span class="c1"># Student ID   :</span>
+<span class="c1"># Email address:</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">lib.spiking_functions</span> <span class="k">as</span> <span class="nn">sf</span>
+
+<span class="n">surrogate_spike_fn</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">SurrogateSpike</span><span class="o">.</span><span class="n">apply</span>
+       
+<div class="viewcode-block" id="SpikingLayer"><a class="viewcode-back" href="../../modules.html#lib.spiking_layer.SpikingLayer">[docs]</a><span class="k">class</span> <span class="nc">SpikingLayer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implements a single spiking layer.</span>
+
+<span class="sd">    The :class:`lib.SpikingLayer` class contains all the parameters and</span>
+<span class="sd">    variables necessary to implement a single spiking layer. It will be a</span>
+<span class="sd">    submodule of the ``torch.nn.Module`` instance named :class:`lib.snn.SNN`.</span>
+<span class="sd">    You will use the class :class:`lib.SpikingLayer` to define your hidden</span>
+<span class="sd">    layer and your output layer.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        tau_mem (float): Membrane time constant.</span>
+<span class="sd">        tau_syn (float): Synaptic time constant.</span>
+<span class="sd">        tau_rise (float): Rise synaptic time constant.</span>
+<span class="sd">        u_rest (float): Resting membrane potential.</span>
+<span class="sd">        u_threshold (float): Firing threshold.</span>
+<span class="sd">        R (float): Membrane resistance.</span>
+<span class="sd">        gamma (float): Decay rate for the post-synaptic current :math:`I`.</span>
+<span class="sd">        beta (float): Decay rate for the membrane potential :math:`U`.</span>
+<span class="sd">        phi (float): Decay rate for the auxiliary current variable :math:`H`.</span>
+<span class="sd">        weights (torch.nn.Parameter): The weight matrix :math:`W` of the layer.</span>
+<span class="sd">        compute_spikes (func): Spike non-linearity function.</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        in_features (int): Size of the pre-synaptic layer.</span>
+<span class="sd">        out_features (int): Size of the current layer.</span>
+<span class="sd">        args (argparse.Namespace): The command-line arguments.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># Store parameters of the layer.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_mem</span>     <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">tau_mem</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_syn</span>     <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">tau_syn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_rise</span>    <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">tau_rise</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">u_rest</span>      <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">u_rest</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">u_threshold</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">u_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">R</span>           <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">R</span>
+
+        <span class="c1"># Calculate the decay scales.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">args</span><span class="o">.</span><span class="n">delta_t</span><span class="o">/</span><span class="n">args</span><span class="o">.</span><span class="n">tau_syn</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span>  <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">args</span><span class="o">.</span><span class="n">delta_t</span><span class="o">/</span><span class="n">args</span><span class="o">.</span><span class="n">tau_mem</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phi</span>   <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">args</span><span class="o">.</span><span class="n">delta_t</span><span class="o">/</span><span class="n">args</span><span class="o">.</span><span class="n">tau_rise</span><span class="p">))</span>
+
+        <span class="c1"># Define which spike nonlinearity function to use.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_spikes</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">SurrogateSpike</span><span class="o">.</span><span class="n">apply</span>
+
+        <span class="c1"># Create and initialize weights.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">out_features</span><span class="p">,</span> <span class="n">in_features</span><span class="p">),</span>
+                                     <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">normal_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> \
+                                <span class="n">std</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">weight_scale</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">in_features</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`weights`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span>
+
+
+<div class="viewcode-block" id="SpikingLayer.update_U"><a class="viewcode-back" href="../../modules.html#lib.spiking_layer.SpikingLayer.update_U">[docs]</a>    <span class="k">def</span> <span class="nf">update_U</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">S</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the membrane potential.</span>
+
+<span class="sd">        Updates the membrane potential given the current and past states</span>
+<span class="sd">        of the network as specified in eq. :eq:`eq-U-ODE`. As a discretized</span>
+<span class="sd">        version of eq. :eq:`eq-U-ODE` please use the following:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            U_i[n+1] = \beta \Big( (U_i[n] - U_{rest}) -RI_i[n] \Big)  </span>
+<span class="sd">            - S_i[n]\Big(U_{thr} - U_{rest} \Big)</span>
+
+<span class="sd">        Note that this is not the most mathematically correct way</span>
+<span class="sd">        to discretize eq. :eq:`eq-U-ODE`, but for the purpose of the current</span>
+<span class="sd">        tutorial we ask you to use the above discretized version. For more</span>
+<span class="sd">        explanations, please refer to the ``DiscretizedODEs.pdf`` file in </span>
+<span class="sd">        moodle.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            U: The membrane potential :math:`U`.</span>
+<span class="sd">            I: The post-synaptic current :math:`I`.</span>
+<span class="sd">            S: The spiking activity :math:`S`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The updated membrane potential of the neurons in the layer.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Paste your code from last week here</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># return ...</span>
+
+<div class="viewcode-block" id="SpikingLayer.update_H"><a class="viewcode-back" href="../../modules.html#lib.spiking_layer.SpikingLayer.update_H">[docs]</a>    <span class="k">def</span> <span class="nf">update_H</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the state of the auxiliary variable for alpha-shaped</span>
+<span class="sd">        post-synaptic current.</span>
+
+<span class="sd">        Implementation of eq. :eq:`eq-H-ODE`. Please note that the pre-synaptic</span>
+<span class="sd">        inputs have already been multiplied by the weights at the beginning of</span>
+<span class="sd">        the forward method. Therefore, you should only make sure you give the</span>
+<span class="sd">        correct inputs argument to this function.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            H: The auxiliary variable for the alpha-shaped post-synaptic</span>
+<span class="sd">                currents :math:`H`.</span>
+<span class="sd">            inputs: The inputs (weighted spikes) to the layer in the current </span>
+<span class="sd">                time step.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The updated auxiliary current variable for the neurons in the layer.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Paste your code from last week here</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># return ...</span>
+
+<div class="viewcode-block" id="SpikingLayer.update_I"><a class="viewcode-back" href="../../modules.html#lib.spiking_layer.SpikingLayer.update_I">[docs]</a>    <span class="k">def</span> <span class="nf">update_I</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the post-synaptic current.</span>
+
+<span class="sd">        Updates the post-synaptic current given the current and past states</span>
+<span class="sd">        of the network as specified in eq. :eq:`eq-I-ODE`. As a discretized</span>
+<span class="sd">        version of eq. :eq:`eq-I-ODE` please use the following:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            I_i[n+1] = \gamma I_i[n] + H_i[n]</span>
+
+
+<span class="sd">        Args: </span>
+<span class="sd">            I: The post-synaptic current :math:`I`.</span>
+<span class="sd">            H: The auxiliary variable for the alpha-shaped post-synaptic</span>
+<span class="sd">                currents :math:`H`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The updated post-synaptic current of the neurons in the layer.</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Paste your code from last week here</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span></div>
+        <span class="c1"># # return ...</span>
+
+<div class="viewcode-block" id="SpikingLayer.forward"><a class="viewcode-back" href="../../modules.html#lib.spiking_layer.SpikingLayer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the output activation of a spiking layer.</span>
+
+<span class="sd">        This method computes the membrane potential and spiking activity of the</span>
+<span class="sd">        current layer across all time steps given the pre-synaptic spiking </span>
+<span class="sd">        activity. For this, the state of the layer is</span>
+<span class="sd">        updated time step by time step; i.e. the post-synaptic current,</span>
+<span class="sd">        membrane potential and spiking activity are computed in each time step.</span>
+<span class="sd">        The states are updated based on the computational graph provided in </span>
+<span class="sd">        Figure 2 in `Neftci et al. (2019)`_, and when filling in the missing</span>
+<span class="sd">        lines you should pay extra attention and make sure that the values</span>
+<span class="sd">        you provide to the update methods belong to the right time step</span>
+<span class="sd">        according to this computational graph.</span>
+
+<span class="sd">        Note that since we deal with alpha-shaped post-synaptic currents here</span>
+<span class="sd">        (and not exponential decay post-synaptic currents), the computational</span>
+<span class="sd">        graph has an extra variable :math:`H` that is updated based on the </span>
+<span class="sd">        inputs in the previous time step, and its own value in the previous</span>
+<span class="sd">        time step. :math:`H` in a given time step is then used to compute the </span>
+<span class="sd">        post-synaptic current :math:`I` in the following time step. Notice that </span>
+<span class="sd">        for this extra equation, the :class:`lib.SpikingLayer` class has an </span>
+<span class="sd">        attribute :math:`phi` that governs the decay rate of the variable </span>
+<span class="sd">        :math:`H`. For further discussion see :mod:`lib.spiking_layer`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            X: The spiking activity of the previous layer.</span>
+
+<span class="sd">        Returns: </span>
+<span class="sd">            (tuple): Tuple containing:   </span>
+
+<span class="sd">            - **U**: The membrane potential for all neurons of the layer in all </span>
+<span class="sd">              time steps.</span>
+<span class="sd">            - **S**: The spiking activity of all neurons of the layer in all </span>
+<span class="sd">              time steps.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">device</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float</span>
+
+        <span class="n">num_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># number of neurons in the layer</span>
+        <span class="n">N</span>  <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Compute the total input to the layer in all time steps</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;abc,cd-&gt;abd&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">t</span><span class="p">()))</span>
+
+        <span class="c1"># Create lists to store the network states in each time step</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="p">[[]]</span><span class="o">*</span><span class="n">N</span>  <span class="c1"># membrane potential</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="p">[[]]</span><span class="o">*</span><span class="n">N</span>  <span class="c1"># spiking activity</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="p">[[]]</span><span class="o">*</span><span class="n">N</span>  <span class="c1"># auxiliary current state</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="p">[[]]</span><span class="o">*</span><span class="n">N</span>  <span class="c1"># post-synaptic current</span>
+
+        <span class="c1"># Initialize states</span>
+        <span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">u_rest</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">num_h</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                                                             <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">S</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">I</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">U</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Compute hidden layer state at each time step</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
+
+            <span class="c1"># Compute the post-synaptic current</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># H[n] = self.update_H(...)</span>
+            <span class="c1"># I[n] = self.update_I(...)</span>
+
+            <span class="c1"># Compute the membrane potential</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># U[n] = self.update_U(...)</span>
+
+            <span class="c1"># Compute the spiking activity</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement&#39;</span><span class="p">)</span>
+            <span class="c1"># S[n] = self.compute_spikes(...)</span>
+
+
+        <span class="n">U</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span></div></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Tutorial 5.2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

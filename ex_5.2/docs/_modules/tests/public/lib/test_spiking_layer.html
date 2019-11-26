@@ -1,0 +1,286 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>tests.public.lib.test_spiking_layer &#8212; Tutorial 5.2  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for tests.public.lib.test_spiking_layer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Public test cases for module :mod:`lib.spiking_layer`</span>
+<span class="sd">----------------------------------------------------------</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="k">import</span> <span class="n">nn</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="kn">import</span> <span class="nn">lib.spiking_layer</span> <span class="k">as</span> <span class="nn">sl</span>
+
+<div class="viewcode-block" id="Namespace"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.Namespace">[docs]</a><span class="k">class</span> <span class="nc">Namespace</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<span class="n">args</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="n">R</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">tau_mem</span><span class="o">=</span><span class="mf">0.010</span><span class="p">,</span> <span class="n">tau_syn</span><span class="o">=</span><span class="mf">0.012</span><span class="p">,</span> <span class="n">tau_rise</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> 
+                    <span class="n">u_rest</span><span class="o">=-</span><span class="mf">0.050</span><span class="p">,</span> <span class="n">u_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">weight_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                    <span class="n">delta_t</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SpikingLayerTestCase"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase">[docs]</a><span class="k">class</span> <span class="nc">SpikingLayerTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A set of public test cases for module :mod:`lib.spiking_layer`.</span>
+
+<span class="sd">    Here, we assess whether the ``Functions`` implemented in the module </span>
+<span class="sd">    :mod:`lib.spiking_layer` are correctly implemented.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SpikingLayerTestCase.setUp"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Ensure reproducibility.</span>
+        <span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed_all</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+        <span class="n">n_in</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="n">n_h</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">10</span>
+
+        <span class="c1"># Data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">U</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">I</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">H</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">&lt;</span>  <span class="mf">0.5</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">n_h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">,</span> <span class="n">n_in</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="n">sl</span><span class="o">.</span><span class="n">SpikingLayer</span><span class="p">(</span><span class="n">n_in</span><span class="p">,</span> <span class="n">n_h</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpikingLayerTestCase.test_update_U"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase.test_update_U">[docs]</a>    <span class="k">def</span> <span class="nf">test_update_U</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.spiking_layer.update_U`.&quot;&quot;&quot;</span>
+
+        <span class="n">target_U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.09978271</span><span class="p">,</span>  <span class="mf">0.06632668</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.49361348</span><span class="p">],</span>
+                               <span class="p">[</span> <span class="mf">0.71898687</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5520569</span> <span class="p">,</span>  <span class="mf">0.32930937</span><span class="p">],</span>
+                               <span class="p">[</span><span class="o">-</span><span class="mf">0.39320755</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.07051149</span><span class="p">,</span>  <span class="mf">0.22450066</span><span class="p">],</span>
+                               <span class="p">[</span><span class="o">-</span><span class="mf">0.03392766</span><span class="p">,</span>  <span class="mf">0.20656866</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.34393513</span><span class="p">]])</span>
+
+        <span class="n">our_U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">update_U</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">U</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_U</span> <span class="o">-</span> <span class="n">our_U</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTupleEqual</span><span class="p">(</span><span class="n">our_U</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">target_U</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+                        <span class="s1">&#39;U update has a dimensionality issue.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertLess</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;U update not correctly computed.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpikingLayerTestCase.test_update_I"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase.test_update_I">[docs]</a>    <span class="k">def</span> <span class="nf">test_update_I</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.spiking_layer.update_I`.&quot;&quot;&quot;</span>
+
+        <span class="n">target_I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.9052</span><span class="p">,</span> <span class="mf">0.7918</span><span class="p">,</span> <span class="mf">1.0407</span><span class="p">],</span>
+                            <span class="p">[</span><span class="mf">0.5944</span><span class="p">,</span> <span class="mf">1.3618</span><span class="p">,</span> <span class="mf">0.5342</span><span class="p">],</span>
+                            <span class="p">[</span><span class="mf">1.1968</span><span class="p">,</span> <span class="mf">0.6525</span><span class="p">,</span> <span class="mf">1.1341</span><span class="p">],</span>
+                            <span class="p">[</span><span class="mf">0.9893</span><span class="p">,</span> <span class="mf">0.6108</span><span class="p">,</span> <span class="mf">1.5742</span><span class="p">]])</span>
+
+        <span class="n">our_I</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">update_I</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_I</span> <span class="o">-</span> <span class="n">our_I</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTupleEqual</span><span class="p">(</span><span class="n">our_I</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">target_I</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+                        <span class="s1">&#39;I update has a dimensionality issue.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertLess</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;I update not correctly computed.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpikingLayerTestCase.test_update_H"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase.test_update_H">[docs]</a>    <span class="k">def</span> <span class="nf">test_update_H</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.spiking_layer.update_H`.&quot;&quot;&quot;</span>
+
+        <span class="n">target_H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.7926607</span><span class="p">,</span>  <span class="mf">0.29438907</span><span class="p">,</span> <span class="mf">0.13704556</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mf">0.38016158</span><span class="p">,</span> <span class="mf">0.3177891</span><span class="p">,</span>  <span class="mf">0.9125357</span> <span class="p">],</span>
+                             <span class="p">[</span><span class="mf">0.99407303</span><span class="p">,</span> <span class="mf">0.7347956</span><span class="p">,</span>  <span class="mf">0.98407686</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mf">0.70585287</span><span class="p">,</span> <span class="mf">1.0155178</span><span class="p">,</span>  <span class="mf">0.44234848</span><span class="p">]])</span>
+
+        <span class="n">our_H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">update_H</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_H</span> <span class="o">-</span> <span class="n">our_H</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTupleEqual</span><span class="p">(</span><span class="n">our_H</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">target_H</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+                        <span class="s1">&#39;H update has a dimensionality issue.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertLess</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;H update not correctly computed.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SpikingLayerTestCase.test_forward"><a class="viewcode-back" href="../../../../tests.html#tests.public.lib.test_spiking_layer.SpikingLayerTestCase.test_forward">[docs]</a>    <span class="k">def</span> <span class="nf">test_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Testing class :class:`lib.spiking_layer.forward`.&quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="n">target_Ulast</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.0500</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0500</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0500</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.0000</span><span class="p">,</span>  <span class="mf">0.0000</span><span class="p">,</span>  <span class="mf">0.0000</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.0452</span><span class="p">,</span>  <span class="mf">0.0452</span><span class="p">,</span>  <span class="mf">0.0452</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.0589</span><span class="p">,</span>  <span class="mf">0.1143</span><span class="p">,</span>  <span class="mf">0.0325</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.0375</span><span class="p">,</span>  <span class="mf">0.1927</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0594</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.0664</span><span class="p">,</span>  <span class="mf">0.3204</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2025</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.1512</span><span class="p">,</span>  <span class="mf">0.4719</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4024</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.2639</span><span class="p">,</span>  <span class="mf">0.6924</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.6083</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.3758</span><span class="p">,</span>  <span class="mf">0.3671</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8335</span><span class="p">],</span>
+                                <span class="p">[</span> <span class="mf">0.4392</span><span class="p">,</span>  <span class="mf">0.6158</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0612</span><span class="p">]])</span>
+        <span class="n">target_Ulast_wrong</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.0500</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0500</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0500</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.0000</span><span class="p">,</span>  <span class="mf">0.0000</span><span class="p">,</span>  <span class="mf">0.0000</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.0452</span><span class="p">,</span>  <span class="mf">0.0452</span><span class="p">,</span>  <span class="mf">0.0452</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.0589</span><span class="p">,</span>  <span class="mf">0.1143</span><span class="p">,</span>  <span class="mf">0.0325</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.0375</span><span class="p">,</span>  <span class="mf">0.1927</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0594</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.0664</span><span class="p">,</span>  <span class="mf">0.3204</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2025</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.1512</span><span class="p">,</span>  <span class="mf">0.4719</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4024</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.2639</span><span class="p">,</span>  <span class="mf">0.6924</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.6083</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.3758</span><span class="p">,</span>  <span class="mf">0.9171</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8335</span><span class="p">],</span>
+                                    <span class="p">[</span> <span class="mf">0.4392</span><span class="p">,</span>  <span class="mf">0.5634</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0612</span><span class="p">]])</span>
+        <span class="n">target_Slast</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                                <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]])</span>
+
+        <span class="n">our_U</span><span class="p">,</span> <span class="n">our_S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">our_U</span> <span class="o">=</span> <span class="n">our_U</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">our_S</span> <span class="o">=</span> <span class="n">our_S</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">diff_U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_Ulast</span> <span class="o">-</span> <span class="n">our_U</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+        <span class="n">diff_S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_Slast</span> <span class="o">-</span> <span class="n">our_S</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+        <span class="n">diff_U_wrong</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">target_Ulast_wrong</span> <span class="o">-</span> <span class="n">our_U</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTupleEqual</span><span class="p">(</span><span class="n">our_U</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">target_Ulast</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+                <span class="s1">&#39;Forward function has a dimensionality issue with U.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTupleEqual</span><span class="p">(</span><span class="n">our_S</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">target_Slast</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+                <span class="s1">&#39;Forward function has a dimensionality issue with S.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">our_U</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> \
+                <span class="s1">&#39;Forward function has an issue with the length of U list.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">our_S</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> \
+                <span class="s1">&#39;Forward function has an issue with the length of S list.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertGreater</span><span class="p">(</span><span class="n">diff_U_wrong</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;The time-step chosen for &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;the inputs U to update_U is not correct.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertLess</span><span class="p">(</span><span class="n">diff_U</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;Forward spiking layer pass not &#39;</span><span class="o">+</span>
+            <span class="s1">&#39;correctly computed. Please make sure that you pass variables &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;to your update_U and spike functions corresponding to the right &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;time step. For this, you can refer to the computation flow &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;diagram of the tutorial slides.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertLess</span><span class="p">(</span><span class="n">diff_S</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;Forward spiking layer pass not &#39;</span><span class="o">+</span>
+            <span class="s1">&#39;correctly computed. Please make sure that you pass variables &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;to your update_S and spike functions corresponding to the right &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;time step. For this, you can refer to the computation flow &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;diagram of the tutorial slides.&#39;</span><span class="p">)</span></div></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Tutorial 5.2</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tests.html">Testing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Maria Cervera de la Rosa.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
